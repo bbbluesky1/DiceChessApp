@@ -1,0 +1,1904 @@
+<!DOCTYPE html>
+
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DiceChess</title>
+  <style>
+    :root {
+  --white-cell: #EBECD0;
+  --black-cell: #739552;
+  --board-size: min(80vmin, 480px);
+  --cell-size: calc(var(--board-size) / 8);
+}
+
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-image: url('./space-art-5626853_640.jpg');
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: auto;
+    }
+
+    .menu-toggle {
+      display: flex; /* ← PC でも常に表示 */
+      flex-direction: column;
+      cursor: pointer;
+      gap: 4px;
+    }
+
+
+    .menu-toggle div {
+      width: 25px;
+      height: 3px;
+      background-color: #fff;
+    }
+
+    nav {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #444;
+      color: #fff;
+      display: none;
+      flex-direction: column;
+      min-width: 150px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    nav a {
+      padding: 0.8rem 1rem;
+      text-decoration: none;
+      color: #fff;
+      border-bottom: 1px solid #555;
+    }
+
+    nav a:hover {
+      background-color: #555;
+    }
+
+    .show-menu nav {
+      display: flex;
+    }
+
+    h1 {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+      color: #333;
+    }
+
+    #status {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #444;
+    }
+
+    table {
+      border-collapse: collapse;
+      border: 2px solid #222;
+      width: var(--board-size);
+      height: var(--board-size);
+      aspect-ratio: 1 / 1;
+      table-layout: fixed;
+    }
+
+    td {
+      width: var(--cell-size);
+      height: var(--cell-size);
+      position: relative;
+      perspective: 1000px;
+      padding: 0;
+    }
+
+    td.white { background-color: var(--white-cell); }
+    td.black { background-color: var(--black-cell); }
+    td.selected { outline: 3px solid yellow; }
+
+    .dice {
+      width: 90%;
+      height: 90%;
+      position: absolute;
+      top: 5%;
+      left: 5%;
+      transform-style: preserve-3d;
+      transform-origin: center;
+      transition: transform 0.5s ease-in-out;
+    }
+
+    .face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border: 1px solid #aaa;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .pip {
+      width: 6px;
+      height: 6px;
+      background: #000;
+      border-radius: 50%;
+      margin: 2px;
+    }
+
+    .front  { transform: rotateY(0deg) translateZ(15px); }
+    .back   { transform: rotateY(180deg) translateZ(15px); }
+    .right  { transform: rotateY(90deg) translateZ(15px); }
+    .left   { transform: rotateY(-90deg) translateZ(15px); }
+    .top    { transform: rotateX(90deg) translateZ(15px); }
+    .bottom { transform: rotateX(-90deg) translateZ(15px); }
+
+    .dice.king {
+      outline: 2px solid red;
+      outline-offset: 1px;
+      border-radius: 6px;
+    }
+
+    .ghost-wrapper {
+      opacity: 0.5;
+      transform: scale(0.5);
+      filter: brightness(60%);
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ghost-dice .face {
+      border: 1px dashed #000;
+    }
+
+    @media (max-width: 768px) {
+      .menu-toggle {
+        display: flex;
+      }
+
+      nav {
+        right: 0;
+        top: 60px;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      #status {
+        font-size: 1rem;
+      }
+
+      :root {
+        --board-size: 85vw;
+      }
+
+      .pip {
+        width: 4px;
+        height: 4px;
+        margin: 1px;
+      }
+
+      .dice {
+        width: 95%;
+        height: 95%;
+        top: 2.5%;
+        left: 2.5%;
+      }
+    }
+
+/* ヘッダー */
+header {
+  height: 60px;
+  background-color: #222;
+  color: white;
+  padding: 0 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: fixed;
+  width: 100%;
+  top: 0;
+  z-index: 1000;
+}
+
+#back-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  margin-right: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#back-button:active {
+  opacity: 0.6;
+}
+
+/* メインエリア：ヘッダーの下に、横並び */
+main#game-container {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 80px;
+  gap: 2rem;
+  max-width: 100%;
+  flex-wrap: wrap; /* ← これで狭い画面では折り返す */
+  overflow-x: hidden; /* ← 横スクロール防止 */
+  box-sizing: border-box;
+}
+
+
+
+/* 盤面エリア */
+#board-container {
+   flex-shrink: 1;
+  max-width: 100%;
+  min-width: 300px;
+}
+
+/* ロボットエリア */
+#robot-area {
+  width: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  max-width: 90vw;
+}
+
+#robot-avatar {
+  width: 60px;
+  height: auto;
+}
+
+#robot-bubble {
+  background-color: #fff;
+  border: 2px solid #888;
+  border-radius: 16px;
+  padding: 10px 14px;
+  max-width: 200px;
+  font-size: 14px;
+  position: relative;
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+#robot-bubble::after {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  width: 0;
+  height: 0;
+  border: 10px solid transparent;
+  border-right-color: #fff;
+}
+
+/* スマホ表示時のスタイル */
+@media (max-width: 768px) {
+  main#game-container {
+    flex-direction: column;
+    align-items: center;
+    padding-top: 80px;
+  }
+
+  #board-container {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+  }
+
+  #robot-area {
+    order: -1; /* ← 上に表示させる */
+    width: 100%;
+    margin-bottom: 1rem;
+    align-items: center;
+  }
+
+  #robot-bubble::after {
+    top: -10px;
+    left: 20px;
+    border: 10px solid transparent;
+    border-bottom-color: #fff;
+    border-right-color: transparent;
+  }
+}
+
+#opponent-wrapper,
+#player-wrapper {
+  width: 100%;
+  display: flex;
+  justify-content: center; /* 全体を中央寄せ */
+  align-items: center; /* 垂直中央揃え */
+  margin-bottom: 0px;
+  background-color: #000;
+  gap: 12px; /* アイコンとテキスト間の余白 */
+}
+
+.player-icon {
+  width: 40px;  /* アイコンのサイズ調整 */
+  height: 40px;
+  border-radius: 50%; /* 丸くする場合 */
+  object-fit: cover;
+}
+
+.player-info {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px; /* 名前とレートの間 */
+  background-color: #000;
+  padding: 6px 12px;
+  border-radius: 10px;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
+  color: #ffffff;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.player-name {
+  /* 名前部分のスタイル */
+}
+
+.player-rate {
+  /* レート部分のスタイル */
+  color: #ffffff;
+  font-size: 1rem;
+}
+
+/* スマホ時（768px以下）にボードの上に来るように */
+@media (max-width: 768px) {
+  #game-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  #board-container {
+    order: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+#room-list-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: auto;
+  margin-top: 10vh;
+}
+
+.room-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+
+.room-card {
+  border: 1px solid #ccc;
+  border-radius: 12px;
+  padding: 16px;
+  background: #f9f9f9;
+  transition: box-shadow 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+
+/* 例: ホスト名がある場合は薄緑、ない場合はグレー背景 */
+.room-card.host-known {
+  background-color: #61ff9e;
+}
+
+.room-card.host-unknown {
+  background-color: #f0f0f0;
+}
+
+
+
+.room-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
+  background-color: #eef;
+}
+
+.room-id {
+  font-weight: bold;
+  font-size: 1.1em;
+  margin-bottom: 8px;
+}
+
+.room-host {
+  color: #555;
+}
+
+#board-container{
+  display:none;
+}
+
+#robot-area{
+  display:none;
+}
+
+  .modal {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .modal.hidden {
+    display: none;
+  }
+
+  .modal-content {
+    background: #fff;
+    color: #000;
+    padding: 20px 30px;
+    border-radius: 12px;
+    text-align: center;
+    max-width: 80%;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  .modal-content button {
+    margin-top: 20px;
+    padding: 8px 16px;
+    font-size: 1rem;
+    border: none;
+    background: #4285F4;
+    color: white;
+    border-radius: 8px;
+    cursor: pointer;
+  }
+
+  .modal-content button:hover {
+    background: #3367d6;
+  }
+  </style>
+</head>
+<body>
+
+
+  <header>
+    <button id="back-button" aria-label="戻る">&larr;</button>
+    <div class="logo">🎲 DiceChess</div>
+    <div class="menu-toggle" onclick="document.body.classList.toggle('show-menu')">
+      <div></div><div></div><div></div>
+    </div>
+    <nav>
+      <a href="./index.html">Home</a>
+      <a href="./bot.html">Bot対戦</a>
+      <a href="./tutorial.html">ルール</a>
+      <a href="./login.html">オンライン対戦</a>
+      <a href="./ranking.html">ランキング</a>
+      <a href="./tsumeshogi.html">詰将棋</a>
+    </nav>
+  </header>
+
+  <div id="room-list-container">
+  <h2 style="color: white; text-align: center;">参加可能な部屋</h2>
+  <div id="room-list" class="room-grid"></div>
+</div>
+  <main id="game-container">
+
+  <div id="board-container">
+    <div id="opponent-wrapper">
+  <img src="./blank-profile-picture-973460_640.png" alt="Opponent Icon" class="player-icon" />
+  <div class="player-info">
+    <span class="player-name" id="opponentName">???</span>
+    <span class="player-rate" id="opponentRate">???</span>
+  </div>
+</div>
+    <table id="board"></table>
+    <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
+    <div id="player-wrapper">
+  <img src="./blank-profile-picture-973460_640.png" alt="Player Icon" class="player-icon" />
+  <div class="player-info">
+    <span class="player-name" id="playerName">???</span>
+    <span class="player-rate" id="playerRate">???</span>
+  </div>
+</div>
+
+  </div>
+
+  <div id="robot-area">
+    <img src="./waving-287_256.gif" alt="Bot" id="robot-avatar" />
+    <div id="robot-bubble">こんにちは！ゲームを始めましょう！</div>
+  </div>
+</main>
+
+<!-- モーダル HTML -->
+<div id="custom-modal" class="modal hidden">
+  <div class="modal-content">
+    <p id="modal-message"></p>
+    <button onclick="closeModal()">OK</button>
+  </div>
+</div>
+
+
+ <!-- Firebase SDK v8系 -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+
+  function showModal(message) {
+    document.getElementById("modal-message").innerText = message;
+    document.getElementById("custom-modal").classList.remove("hidden");
+  }
+
+  function closeModal() {
+    document.getElementById("custom-modal").classList.add("hidden");
+  }
+
+  document.getElementById('back-button').addEventListener('click', () => {
+  window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
+});
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyAFQI1E8pspRrSHECSzh5mQxvIGG2oqyq8",
+    authDomain: "dicechess-f5f50.firebaseapp.com",
+    projectId: "dicechess-f5f50",
+    storageBucket: "dicechess-f5f50.firebasestorage.app",
+    messagingSenderId: "612776353708",
+    appId: "1:612776353708:web:f285fa250fc6a61faae409",
+    measurementId: "G-5H17F0B5R0"
+  };
+
+  // Firebase 初期化
+  const app = firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const db2 = firebase.firestore();
+
+
+
+function calculateEloRating(Ra, Rb, result, K=32) {
+  const Ea = 1 / (1 + Math.pow(10, (Rb - Ra) / 400));
+  const newRa = Ra + K * (result - Ea);
+  return Math.round(newRa);
+}
+
+
+function updateUserRate(userName, opponentRate, gameResult) {
+  db2.collection("users")
+    .where("name", "==", userName)
+    .get()
+    .then((querySnapshot) => {
+      if (querySnapshot.empty) {
+        console.error("ユーザーが見つかりません");
+        return;
+      }
+
+      querySnapshot.forEach((doc) => {
+        const currentRate = doc.data().rate || 1500;
+        const newRate = calculateEloRating(currentRate, opponentRate, gameResult);
+
+        doc.ref.update({ rate: newRate })
+          .then(() => {
+           showModal(`ユーザー ${userName} のレートを ${currentRate} → ${newRate} に更新しました`);
+          })
+          .catch((err) => {
+            showmodal("レート更新失敗:", err);
+          });
+      });
+    })
+    .catch((err) => {
+      console.error("ユーザー取得失敗:", err);
+    });
+}
+
+
+function reportVictory() {
+  firebase.database().ref("rooms/" + roomid).update({
+    winner: myname,
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+  .then(() => {
+    console.log("勝利報告が完了しました");
+  })
+  .catch((err) => {
+    console.error("勝利報告に失敗:", err);
+  });
+}
+
+
+function getRate(opponentName){
+
+  const myName = params.get('myname');
+  
+  Promise.all([
+    db2.collection("users").where("name", "==", myName).get(),
+    db2.collection("users").where("name", "==", opponentName).get()
+  ]).then(([mySnap, oppSnap]) => {
+    if (mySnap.empty || oppSnap.empty) {
+      console.error("ユーザーが見つかりません");
+      return;
+    }
+
+    const myDoc = mySnap.docs[0];
+    const oppDoc = oppSnap.docs[0];
+
+    const myRate = myDoc.data().rate || 1500;
+    const oppRate = oppDoc.data().rate || 1500;
+
+    document.getElementById("playerRate").innerHTML = myRate;
+    document.getElementById("playerName").innerHTML = myName;
+    document.getElementById("opponentRate").innerHTML = oppRate;
+
+  }).catch((error) => {
+    console.error("Firestore読み込みエラー:", error);
+  });
+}
+
+
+function listenForLosses() {
+  const resultsRef = firebase.database().ref("rooms/" + roomid);
+
+  resultsRef.on("value", (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.winner || data.winner === myname) return;
+
+    console.log("You lost. Calculating new rating...");
+
+    // 相手の名前がわかっている前提（room.opponent）
+    const opponentName = data.winner; // 勝者＝相手
+    if (!opponentName) {
+      console.error("opponent name missing");
+      return;
+    }
+
+    // 自分と相手のレートを Firestore から取得
+    Promise.all([
+      db2.collection("users").where("name", "==", myname).get(),
+      db2.collection("users").where("name", "==", opponentName).get()
+    ]).then(([mySnap, oppSnap]) => {
+      if (mySnap.empty || oppSnap.empty) {
+        console.error("ユーザーが見つかりません");
+        return;
+      }
+
+      const myDoc = mySnap.docs[0];
+      const oppDoc = oppSnap.docs[0];
+
+      const myRate = myDoc.data().rate || 1500;
+      const oppRate = oppDoc.data().rate || 1500;
+
+      const newMyRate = calculateEloRating(myRate, oppRate, 0); // 敗北なので result = 0
+
+      myDoc.ref.update({ rate: newMyRate }).then(() => {
+        showModal(`あなたのレート: ${myRate} → ${newMyRate}`);
+        firebase.database().ref("rooms/" + roomid).update({
+    winner: "",
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+        setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 3000); // 1000ミリ秒 = 1秒
+      });
+
+    }).catch(err => {
+      console.error("レート取得エラー", err);
+    });
+  });
+}
+
+function winnerrateupdate(){
+let opponentName = document.getElementById("opponentName").textContent;
+console.log(opponentName);
+const resultsRef = firebase.database().ref("rooms/" + roomid);
+  resultsRef.on("value", (snapshot) => {
+
+    // 自分と相手のレートを Firestore から取得
+    Promise.all([
+      db2.collection("users").where("name", "==", myname).get(),
+      db2.collection("users").where("name", "==", opponentName).get()
+    ]).then(([mySnap, oppSnap]) => {
+      if (mySnap.empty || oppSnap.empty) {
+        console.error("ユーザーが見つかりません");
+        return;
+      }
+
+      const myDoc = mySnap.docs[0];
+      const oppDoc = oppSnap.docs[0];
+
+      const myRate = myDoc.data().rate || 1500;
+      const oppRate = oppDoc.data().rate || 1500;
+
+      const newMyRate = calculateEloRating(myRate, oppRate, 1);
+
+      myDoc.ref.update({ rate: newMyRate }).then(() => {
+        showModal(`あなたのレート: ${myRate} → ${newMyRate}`);
+      });
+
+    }).catch(err => {
+      console.error("レート取得エラー", err);
+    });
+  });
+}
+
+
+
+
+
+
+
+
+ var roomid = null;
+ var params = new URLSearchParams(window.location.search);
+ var myname = params.get('myname');
+ var room = null;
+
+async function getOpponentName(roomId, myName) {
+  try {
+    const roomRef = firebase.database().ref("rooms/" + roomId);
+    let snapshot = await roomRef.once("value");
+    let room = snapshot.val();
+    roomid = roomId;
+
+    roomRef.onDisconnect().update({
+  name: "",
+  moves: "",
+  opponent: "",
+  status: "waiting",
+  turn: "",
+  winner: "",
+});
+
+    if (!room) {
+      console.log("部屋が存在しません");
+      return null;
+    }
+
+    // 初期プレイヤーであれば name に登録
+    if (!room.name) {
+      await roomRef.update({
+        name: myName,
+        status: "waiting",
+        turn: myName
+      });
+      console.log("部屋を作成:", myName);
+      updateRobotMessage("対戦相手待ち..."); 
+      listenForEntry(myName,roomId)
+    }
+
+    // 相手プレイヤーとして参加
+    snapshot = await roomRef.once("value");
+    room = snapshot.val();
+
+    if (!room.opponent && room.name !== myName) {
+      await roomRef.update({
+        opponent: myName,
+        status: "playing"
+      });
+      console.log("相手として参加:", myName);
+      listenForLosses()
+      let opponentName = (room.name === myName) ? room.opponent : room.name;
+      document.getElementById("opponentName").textContent = room.name;
+      getRate(opponentName);
+      updateRobotMessage(room.turn + "のターン"); 
+    }
+
+    
+
+    return opponentName;
+  } catch (error) {
+    console.error("対戦相手取得エラー:", error);
+    return null;
+  }
+}
+
+
+
+  async function getRandomWaitingRoom() {
+      try {
+        // "rooms"ノード以下の全データ取得
+        const snapshot = await db.ref("rooms").once("value");
+        const allRooms = snapshot.val() || {};
+
+        // "status"が"waiting"の部屋だけ抽出
+        const waitingRooms = Object.entries(allRooms).filter(
+          ([, value]) => value.status === "waiting"
+        );
+
+        if (waitingRooms.length === 0) {
+          console.log("待機中の部屋はありません");
+          return null;
+        }
+
+        // ランダムに1つ選ぶ
+        const randomIndex = Math.floor(Math.random() * waitingRooms.length);
+        const [roomId, roomData] = waitingRooms[randomIndex];
+
+        console.log("選ばれた部屋:", roomId, roomData);
+        return { id: roomId, ...roomData };
+      } catch (error) {
+        console.error("データ取得エラー:", error);
+        return null;
+      }
+    }
+/*
+  // 使用例
+  getRandomWaitingRoom().then((room) => {
+    if (room) {
+      console.log("参加部屋:", room.id);
+      getOpponentName(room.id,myname);
+      listenForOpponentMove(myname,room.id);
+    } else {
+      console.log("新しく部屋を作成する処理へ");
+    }
+  });
+  */
+
+async function getWaitingRooms() {
+  try {
+    const snapshot = await db.ref("rooms").once("value");
+    const allRooms = snapshot.val() || {};
+
+    const waitingRooms = Object.entries(allRooms)
+      .filter(([, value]) => value.status === "waiting")
+      .map(([id, value]) => ({ id, ...value }));
+
+    return waitingRooms;
+  } catch (error) {
+    console.error("部屋一覧取得エラー:", error);
+    return [];
+  }
+}
+
+async function showRoomList(myname) {
+  const container = document.getElementById("room-list");
+  container.innerHTML = "<p style='color:white; textalign'>読み込み中...</p>";
+
+  const rooms = await getWaitingRooms();
+
+  if (rooms.length === 0) {
+    container.innerHTML = "<p>待機中の部屋はありません</p>";
+    return;
+  }
+
+  container.innerHTML = ""; // 初期化
+rooms.forEach((room) => {
+  const card = document.createElement("div");
+
+  // ステータスに応じたクラス
+  const statusClass = `status-${room.status.toLowerCase()}`;
+
+  // ホスト名の有無でクラスを追加
+  const hostClass = room.name ? "host-known" : "host-unknown";
+
+  // クラス名をまとめて設定
+  card.className = `room-card ${statusClass} ${hostClass}`;
+
+  card.innerHTML = `
+    <div class="room-id">部屋ID: ${room.id}</div>
+    <div class="room-host">ホスト: ${room.name || "不明"}</div>
+    <div class="room-status">ステータス: ${room.status}</div>
+  `;
+
+  card.addEventListener("click", () => {
+    console.log("選択された部屋:", room.id);
+    joinRoom(room.id, myname);
+  });
+
+  container.appendChild(card);
+});
+
+}
+
+
+function joinRoom(roomId, myname) {
+  const container = document.getElementById("room-list-container");
+  const board_container =  document.getElementById("board-container");
+  const robot_area = document.getElementById("robot-area");
+  container.style.display = "none";
+  board_container.style.display = "flex";
+  robot_area.style.display = "flex";
+  console.log("参加部屋:", roomId);
+  getOpponentName(roomId, myname);
+  listenForOpponentMove(myname, roomId);
+  // ここで画面遷移やゲームUI初期化なども必要
+}
+
+ 
+showRoomList(myname);
+
+
+
+
+
+
+
+async function sendMove(roomId, move) {
+  console.log(roomId);
+  // move は例: { from: "e2", to: "e4", player: "A" }
+
+  const movesRef = firebase.database().ref(`rooms/${roomId}/moves`);
+
+  movesRef.push(move)
+    .then(() => {
+      console.log("指し手を送信しました:", move);
+    })
+    .catch((error) => {
+      console.error("指し手の送信エラー:", error);
+    });
+ 
+  // ターンを相手に渡す
+  const roomRef = firebase.database().ref("rooms/" + roomId);
+  const snapshot = await roomRef.once("value");
+  const room = snapshot.val();
+
+  const nextTurn = (room.turn === room.name) ? room.opponent : room.name;
+  await roomRef.update({ turn: nextTurn });
+  updateRobotMessage(nextTurn + "のターン");
+}
+
+
+
+async function isMyTurn(myName) {
+  const roomRef = firebase.database().ref("rooms/" + roomid);
+  let snapshot = await roomRef.once("value");
+  let room = snapshot.val();
+  console.log(myName,room.turn,roomid);
+  return room.turn === myName;
+}
+
+
+
+
+
+
+  function updateRobotMessage(message) {
+  const bubble = document.getElementById('robot-bubble');
+  if (bubble) {
+    bubble.textContent = message;
+  }
+}
+
+const board = document.getElementById("board");
+//const status = document.getElementById("status");
+const SIZE = 8;
+let selected = null;
+let currentPlayer = "white";
+const state = [];
+
+const diceRotations = {
+  1: 'rotateX(0deg) rotateY(0deg)',
+  2: 'rotateX(-90deg) rotateY(0deg)',
+  3: 'rotateY(-90deg)',
+  4: 'rotateY(90deg)',
+  5: 'rotateX(90deg) rotateY(0deg)',
+  6: 'rotateX(180deg) rotateY(0deg)'
+};
+
+const pipsMap = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8]
+};
+
+function createPiece(top, color, player, isKing = false) {
+  let die;
+
+   switch (top) {
+    case 1:
+      die = { top: 1, bottom: 6, left: 4, right: 3, front: 2, back: 5 };
+      break;
+    case 2:
+      die = { top: 2, bottom: 5, left: 4, right: 3, front: 6, back: 1 };
+      break;
+    case 3:
+      die = { top: 3, bottom: 4, left: 6, right: 1, front: 2, back: 5 };
+      break;
+    case 4:
+      die = { top: 4, bottom: 3, left: 1, right: 6, front: 2, back: 5 };
+      break;
+    case 5:
+      die = { top: 5, bottom: 2, left: 4, right: 3, front: 1, back: 6 };
+      break;
+    case 6:
+      die = { top: 6, bottom: 1, left: 4, right: 3, front: 5, back: 2 };
+      break;
+    default:
+      throw new Error("Invalid top value");
+  }
+
+  // 黒なら左右・前後を反転
+  if (player=="black") {
+    [die.left, die.right] = [die.right, die.left];
+    [die.front, die.back] = [die.back, die.front];
+  }
+
+  return { ...die, color, player, isKing };
+}
+
+function playDiceRollSound() {
+  const audio = document.getElementById('dice-roll-sound');
+  if (audio) {
+    audio.currentTime = 0; // 巻き戻し（連続再生用）
+    audio.play();
+  }
+}
+
+function rollDie(die, direction) {
+  const newDie = { ...die };
+
+  switch (direction) {
+    case "up":
+      newDie.top = die.back;
+      newDie.bottom = die.front;
+      newDie.front = die.top;
+      newDie.back = die.bottom;
+      break;
+    case "down":
+      newDie.top = die.front;
+      newDie.bottom = die.back;
+      newDie.front = die.bottom;
+      newDie.back = die.top;
+      break;
+    case "left":
+      newDie.top = die.right;
+      newDie.bottom = die.left;
+      newDie.left = die.top;
+      newDie.right = die.bottom;
+      break;
+    case "right":
+      newDie.top = die.left;
+      newDie.bottom = die.right;
+      newDie.left = die.bottom;
+      newDie.right = die.top;
+      break;
+  }
+
+  return newDie;
+}
+
+
+
+function setup() {
+  for (let r = 0; r < SIZE; r++) {
+    const row = [];
+    const tr = document.createElement("tr");
+    for (let c = 0; c < SIZE; c++) {
+      const td = document.createElement("td");
+      td.dataset.row = r;
+      td.dataset.col = c;
+      td.className = (r + c) % 2 === 0 ? "white" : "black";
+      td.addEventListener("click", onCellClick);
+      tr.appendChild(td);
+      row.push(null);
+    }
+    board.appendChild(tr);
+    state.push(row);
+  }
+
+  const backRank = [5, 3, 3, 6, 2, 3, 3, 5];
+  const reversedBackRank = [...backRank].reverse();
+  for (let i = 0; i < SIZE; i++) {
+  state[7][i] = createPiece(backRank[i], "", "white", backRank[i] === 2);
+  state[6][i] = createPiece(1, "", "white");
+
+  state[0][i] = createPiece(reversedBackRank[i], "", "black", reversedBackRank[i] === 2);
+  state[1][i] = createPiece(1, "", "black");
+}
+
+
+  render();
+}
+
+let ghostMoves = [];
+
+function getGhostMoves(piece, sr, sc) {
+  if (!piece) return [];
+
+  const moves = [];
+  const directions = [
+    { dr: -1, dc: 0 }, // 上
+    { dr: 1, dc: 0 },  // 下
+    { dr: 0, dc: -1 }, // 左
+    { dr: 0, dc: 1 }   // 右
+  ];
+
+  directions.forEach(({ dr, dc }) => {
+    for (let i = 1; i <= piece.top; i++) {
+      const r = sr + dr * i;
+      const c = sc + dc * i; //
+      if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) break;
+
+      const target = state[r][c];
+      const newDie = moveDie(piece, dc * i, dr * i);
+
+      if (target) {
+        if (target.player === piece.player) break;
+            
+        if (piece.top < target.top) {
+          moves.push({ r, c, piece: { ...piece, ...newDie } });
+        }
+      
+        break;
+      } else {
+        moves.push({ r, c, piece: { ...piece, ...newDie } });
+      }
+    }
+  });
+
+  return moves;
+}
+
+function createDiceElement(piece, isGhost = false) {
+  const wrapper = document.createElement("div"); // ゴースト用ラッパー
+  const dice = document.createElement("div");
+  dice.id = `piece-${piece.id}`; // ID追加
+
+  const colorClass = piece.isKing
+    ? (piece.player === "white" ? "red-dice" : "blue-dice")
+    : (piece.player === "white" ? "white-dice" : "black-dice");
+
+  dice.className = `dice ${colorClass}`;
+  dice.style.transform = diceRotations[piece.top];
+  dice.dataset.rotation = "0,0";
+
+  if (isGhost) {
+    wrapper.className = "ghost-wrapper";
+    dice.classList.add("ghost-dice");
+  }
+
+  ["front", "back", "right", "left", "top", "bottom"].forEach((side) => {
+    const face = document.createElement("div");
+    face.className = `face ${side}`;
+    face.style.background = piece.isKing
+      ? (piece.player === "white" ? "#c00" : "#06c")
+      : (piece.player === "white" ? "#fff" : "#222");
+
+    const faceNumberMap = {
+      front: 1,
+      back: 6,
+      right: 3,
+      left: 4,
+      top: 2,
+      bottom: 5,
+    };
+    const faceNum = faceNumberMap[side];
+    pipsMap[faceNum].forEach(i => {
+      const pip = document.createElement("div");
+      pip.className = "pip";
+      pip.style.backgroundColor = piece.player === "white" ? "#000" : "#fff";
+      face.appendChild(pip);
+    });
+    dice.appendChild(face);
+  });
+
+  if (isGhost) {
+    wrapper.appendChild(dice);
+    return wrapper;
+  }
+
+  return dice;
+}
+
+// サイコロの累積回転角度（グローバル変数でも、diceElement.datasetでも可）
+let rotationX = 0;
+let rotationY = 0;
+let rotationZ = 0;
+
+function animateDiceMoveSmooth(diceElement, dx, dy, duration = 0.3) {
+  return new Promise((resolve) => {
+    const tileSize = 60;
+    if (dx === 0 && dy === 0 || duration <= 0) {
+      resolve();
+      return;
+    }
+
+    const moveX = dx * tileSize;
+    const moveY = dy * tileSize;
+
+    // サイコロの回転（1マス分だけ対応）
+    const rotateX = dy === -1 ? 90 : dy === 1 ? -90 : 0;
+    const rotateY = dx === 1 ? 90 : dx === -1 ? -90 : 0;
+
+    // 現在の位置と回転を取得
+    const startX = parseFloat(diceElement.dataset.posX || "0");
+    const startY = parseFloat(diceElement.dataset.posY || "0");
+    const startRotateX = parseFloat(diceElement.dataset.rotateX || "0");
+    const startRotateY = parseFloat(diceElement.dataset.rotateY || "0");
+
+    const targetX = startX + moveX;
+    const targetY = startY + moveY;
+    const targetRotateX = startRotateX + rotateX;
+    const targetRotateY = startRotateY + rotateY;
+
+    diceElement.style.position = "absolute";
+
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = (now - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+
+      const currentX = startX + (targetX - startX) * progress;
+      const currentY = startY + (targetY - startY) * progress;
+      const currentRotateX = startRotateX + (targetRotateX - startRotateX) * progress;
+      const currentRotateY = startRotateY + (targetRotateY - startRotateY) * progress;
+
+      diceElement.style.transform = `
+        translate(${currentX}px, ${currentY}px)
+        rotateX(${currentRotateX}deg)
+        rotateY(${currentRotateY}deg)
+      `;
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        // 最終状態に固定
+        diceElement.dataset.posX = targetX;
+        diceElement.dataset.posY = targetY;
+        diceElement.dataset.rotateX = targetRotateX;
+        diceElement.dataset.rotateY = targetRotateY;
+
+        diceElement.style.transform = `
+          translate(${targetX}px, ${targetY}px)
+          rotateX(${targetRotateX}deg)
+          rotateY(${targetRotateY}deg)
+        `;
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(step);
+  });
+}
+
+async function animateMoveAndUpdateState(sr, sc, directions, piece) {
+  let currentDie = { ...piece };
+  let row = sr;
+  let col = sc;
+
+  for (const dir of directions) {
+    const dr = dir === "up" ? -1 : dir === "down" ? 1 : 0;
+    const dc = dir === "left" ? -1 : dir === "right" ? 1 : 0;
+    const nr = row + dr;
+    const nc = col + dc;
+    
+    const diceElem = board.rows[row].cells[col].querySelector(".dice");
+
+    // 出目更新
+    currentDie = rollDie(currentDie, dir);
+
+    // アニメーション
+    await animateDiceMoveSmooth(diceElem, dc, dr);
+    playDiceRollSound();
+
+    // DOM操作でマス移動（renderなし）
+    board.rows[row].cells[col].innerHTML = "";
+    board.rows[nr].cells[nc].appendChild(diceElem);
+
+    // 内部状態更新
+    state[nr][nc] = { ...piece, ...currentDie };
+    state[row][col] = null;
+
+    // dice の表示を更新
+    render();
+
+    row = nr;
+    col = nc;
+  }
+
+  ghostMoves = [];
+  selected = null;
+  render(); // 最後にまとめて再描画
+}
+
+
+
+function moveDie(originalDie, dx, dy) {
+  let die = { ...originalDie };
+
+  const step = (dir, count) => {
+    for (let i = 0; i < count; i++) {
+      die = rollDie(die, dir);
+    }
+  };
+
+  if (dy < 0) step("up", -dy);
+  else if (dy > 0) step("down", dy);
+
+  if (dx < 0) step("left", -dx);
+  else if (dx > 0) step("right", dx);
+
+  return die;
+}
+
+
+
+
+function render() {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const td = board.rows[r].cells[c];
+      td.classList.remove("selected");
+      td.innerHTML = "";
+      const piece = state[r][c];
+      if (piece) {
+        const dice = createDiceElement(piece);
+        td.appendChild(dice);
+      }
+    }
+  }
+
+  // ゴースト描画
+console.log(`Ghost moves: `, ghostMoves);
+ghostMoves.forEach(({ r, c, piece }) => {
+  const td = board.rows[r].cells[c];
+  const ghost = createDiceElement(piece, true);
+  console.log(`Appending ghost to cell at [${r}, ${c}]`);
+  td.appendChild(ghost);
+});
+
+
+}
+
+async function onCellClick(e) {
+  const row = parseInt(e.currentTarget.dataset.row);
+  const col = parseInt(e.currentTarget.dataset.col);
+  const cell = state[row][col];
+
+  const myTurn = await isMyTurn(myname);
+  console.log(myTurn);
+  if (!myTurn) {
+    return;
+  }
+
+  ghostMoves = getGhostMoves(selected, row, col);
+  render();
+
+  if (!selected && cell && cell.player === currentPlayer) {
+    selected = [row, col];
+    ghostMoves = getGhostMoves(cell, row, col);
+    render();
+    board.rows[row].cells[col].classList.add("selected");
+    return;
+  }
+
+  if (selected) {
+    const [sr, sc] = selected;
+    const piece = state[sr][sc];
+    const target = state[row][col];
+
+    const dr = row - sr;
+    const dc = col - sc;
+    const isStraight = (dr === 0 || dc === 0);
+    const distance = Math.max(Math.abs(dr), Math.abs(dc));
+    const inRange = distance <= piece.top;
+
+    if (!isStraight || !inRange) {
+      selected = null;
+      ghostMoves = [];
+      render();
+      return;
+    }
+
+    const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+    const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+    let r = sr + stepR;
+    let c = sc + stepC;
+    let foundEnemy = null;
+
+    while (r !== row || c !== col) {
+      const mid = state[r][c];
+      if (mid) {
+        if (mid.player === piece.player) {
+          selected = null;
+          ghostMoves = [];
+          render();
+          return;
+        } else {
+          if (foundEnemy) {
+            selected = null;
+            ghostMoves = [];
+            render();
+            return;
+          }
+          foundEnemy = { ...mid, row: r, col: c };
+        }
+      }
+      r += stepR;
+      c += stepC;
+    }
+
+    const dx = col - sc;
+    const dy = row - sr;
+    const newDie = moveDie(piece, dx, dy);
+    const directions = [];
+    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+
+    // 敵がいて、その敵の駒が強いときだけ取る
+    if (target && target.player !== piece.player && piece.top < target.top) {
+      await animateMoveAndUpdateState(sr, sc, directions, piece);
+      state[row][col] = { ...piece, ...newDie };
+      state[sr][sc] = null;
+      ghostMoves = [];
+      selected = null;
+      render();
+
+      const move = {
+        from: { y: sr, x: sc },
+        to: { y: row, x: col },
+        player: myname,
+        timestamp: Date.now()
+      };
+
+      sendMove(roomid, move);
+
+      if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
+        winnerrateupdate() // 勝ち
+        reportVictory()
+        showModal(myname + "wins!");
+        firebase.database().ref("rooms/" + roomid).update({
+    winner: "",
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+        setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 3000); // 1000ミリ秒 = 1秒
+        return;
+      }
+      if (checkmate("black")) {
+        winnerrateupdate() // 勝ち
+        reportVictory()
+        setTimeout(() => {
+          showModal(myname + "wins!");
+          firebase.database().ref("rooms/" + roomid).update({
+    winner: "",
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+          setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 3000); // 1000ミリ秒 = 1秒
+        }, 2000);
+        return;
+      }
+      return;
+    }
+
+    // 途中に敵がいて、それを取れる場合
+    if (foundEnemy && piece.top < foundEnemy.top && foundEnemy.row === row && foundEnemy.col === col) {
+      await animateMoveAndUpdateState(sr, sc, directions, piece);
+      state[row][col] = { ...piece, ...newDie };
+      state[sr][sc] = null;
+      ghostMoves = [];
+      selected = null;
+      render();
+
+      const move = {
+        from: { y: sr, x: sc },
+        to: { y: row, x: col },
+        player: myname,
+        timestamp: Date.now()
+      };
+
+      sendMove(roomid, move);
+
+      if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
+        winnerrateupdate() // make
+        reportVictory()
+        showModal(myname + "wins!");
+        firebase.database().ref("rooms/" + roomid).update({
+    winner: "",
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+        setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 3000); // 1000ミリ秒 = 1秒
+        return;
+      }
+      if (checkmate("black")) {
+        winnerrateupdate() // make
+        reportVictory()
+        setTimeout(() => {
+          showModal(myname + "wins!");
+          firebase.database().ref("rooms/" + roomid).update({
+    winner: "",
+    status:"waiting",
+    name:"",
+    turn:"",
+    opponent:"",
+    moves:"",
+  })
+          setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 3000); // 1000ミリ秒 = 1秒
+        }, 2000);
+        return;
+      }
+      return;
+    }
+
+    // 通常移動（敵なし）
+    if (!target && !foundEnemy) {
+      await animateMoveAndUpdateState(sr, sc, directions, piece);
+      state[row][col] = { ...piece, ...newDie };
+      state[sr][sc] = null;
+      ghostMoves = [];
+      selected = null;
+      render();
+
+      const move = {
+        from: { y: sr, x: sc },
+        to: { y: row, x: col },
+        player: myname,
+        timestamp: Date.now()
+      };
+
+      sendMove(roomid, move);
+      return;
+    }
+
+    // 非合法だった場合（到達できても取れない・条件を満たさない）
+    selected = null;
+    ghostMoves = [];
+    render();
+  }
+}
+
+
+
+
+
+
+
+function hasPieceInBetween(sr, sc, row, col, board = state) {
+  const dr = row - sr;
+  const dc = col - sc;
+  const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+  const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+  let r = sr + stepR;
+  let c = sc + stepC;
+
+  while (r !== row || c !== col) {
+    if (board[r][c]) {
+      return { blocked: true, piece: board[r][c] };
+    }
+    r += stepR;
+    c += stepC;
+  }
+  return { blocked: false, piece: null };
+}
+
+
+/*
+function checkWin(attacker) {// checkmate()に変更
+  if (checkmate(attacker)) {
+    showModal(`checkmate! ${attacker} wins!`);
+    setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 500); // 1000ミリ秒 = 1秒
+    return;
+  }
+  endTurn(attacker);
+}
+  */
+
+
+function listenForEntry(myName,roomId){
+  const moveRef = firebase.database().ref("rooms/" + roomId);
+  moveRef.on("value", (snapshot) => {
+  const room = snapshot.val();
+  if (room.opponent){
+    document.getElementById("opponentName").textContent = room.opponent;
+    getRate(room.opponent);
+    updateRobotMessage(room.turn + "のターン"); 
+  }else{
+    updateRobotMessage("対戦相手を待っています..."); 
+  }
+  });
+}
+
+
+
+function listenForOpponentMove(myName,roomId){
+  const moveRef = firebase.database().ref("rooms/" + roomId+"/moves");
+  moveRef.limitToLast(1).on("child_added", (snapshot) => {
+    const move = snapshot.val();
+    if (!move) return;
+
+    // 自分の手ではなく、相手の手であれば反映
+    if (move.player !== myName) {
+      console.log("相手の手を検出:", move);
+
+      // 移動アニメーションや盤面反映ロジックを呼び出す
+      applyOpponentMove(move.from, move.to, move.diceState);
+    }
+  });
+}
+
+async function applyOpponentMove(from, to, diceState) {
+  const sr = 7 - from.y;
+  const sc = 7 - from.x;
+  const tr = 7 - to.y;
+  const tc = 7 - to.x;
+
+  const piece = state[sr][sc];
+  if (!piece) return;
+
+  state[sr][sc] = null;
+  state[tr][tc] = {
+    ...piece,
+    diceState: diceState
+  };
+
+  const dx = tc - sc;
+  const dy = tr - sr;
+  const directions = [];
+  for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+  for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+
+  await animateMoveAndUpdateState(sr, sc, directions, piece);
+
+  render();
+  updateRobotMessage(myname + "のターン"); 
+}
+
+
+
+function checkWinner(boardState) {
+  let hasWhiteKing = false;
+  let hasBlackKing = false;
+  for (let row of boardState) {
+    for (let piece of row) {
+      if (piece?.isKing) {
+        if (piece.player === "white") hasWhiteKing = true;
+        if (piece.player === "black") hasBlackKing = true;
+      }
+    }
+  }
+  if (!hasWhiteKing) return "black";
+  if (!hasBlackKing) return "white";
+  return null;
+}
+
+function isInCheck(color) {
+  return isInCheckAfterMove(color, state);
+}
+
+
+function isInCheckAfterMove(color, board) {
+  let kingPosition = null;
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.player === color && piece.isKing) {
+        kingPosition = { row, col };
+        break;
+      }
+    }
+    if (kingPosition) break;
+  }
+
+  if (!kingPosition) return true; // キングがいない＝既に取られてる
+
+  const opponent = color === "white" ? "black" : "white";
+  const oppMoves = generateMoves(opponent, board);
+  for (const move of oppMoves) {
+    const [tr, tc] = move.to;
+    if (tr === kingPosition.row && tc === kingPosition.col) {
+      return true;
+    }
+  }
+
+  return false;
+}
+function endTurn(player) {
+  currentPlayer = player === "white" ? "black" : "white";
+  updateRobotMessage(`${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`);
+  //status.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`;
+  botTurn();
+}
+
+/*
+function checkWin(attacker) {// checkmate()に変更
+  if (checkmate(attacker)) {
+    showModal(`checkmate! ${attacker} wins!`);
+    setTimeout(() => {
+    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
+  }, 500); // 1000ミリ秒 = 1秒
+    return;
+  }
+  endTurn(attacker);
+}
+  */
+
+
+
+
+
+
+
+
+
+
+
+function cloneBoard(boardState) {
+  return boardState.map(row => row.map(cell => cell ? { ...cell } : null));
+}
+
+function evaluateBoard(board) {
+  let score = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece) {
+        let baseValue = 10 + piece.top; // 基本値 + 出目（攻撃力）
+        if (piece.isKing) baseValue += 50; // キングはさらに高評価
+        // 盤の前方にいるほど高評価（前に出ている駒は積極的）
+        const advanceBonus = piece.player === "black" ? (7 - r) : r;
+        baseValue += advanceBonus;
+
+        // 敵駒としてマイナス、味方としてプラス
+        score += piece.player === "black" ? baseValue : -baseValue;
+      }
+    }
+  }
+
+  return score;
+}
+
+function hasBlockingPiece(sr, sc, er, ec, board) {
+  const dr = Math.sign(er - sr);
+  const dc = Math.sign(ec - sc);
+  let r = sr + dr;
+  let c = sc + dc;
+  while (r !== er || c !== ec) {
+    if (board[r][c]) return true;
+    r += dr;
+    c += dc;
+  }
+  return false;
+}
+
+function getBlockingPosition(sr, sc, dr, dc, board) {
+  let r = sr + dr;
+  let c = sc + dc;
+  while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+    if (board[r][c]) return [r, c];
+    r += dr;
+    c += dc;
+  }
+  return [-1, -1];
+}
+
+
+function generateMoves(player, boardState) {
+  const moves = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (!piece || piece.player !== player) continue;
+      const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
+
+      for (const [dr, dc] of dirs) {
+        for (let dist = 1; dist <= piece.top; dist++) {
+          const nr = r + dr * dist;
+          const nc = c + dc * dist;
+          if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) break;
+
+          const target = boardState[nr][nc];
+
+          // 中間に駒がある場合、そこが敵ならそこで止まる
+          if (hasBlockingPiece(r, c, nr, nc, boardState)) {
+            const [br, bc] = getBlockingPosition(r, c, dr, dc, boardState);
+            const blocking = boardState[br][bc];
+            if (blocking && blocking.player !== player && piece.top < blocking.top) {
+              // 敵で、かつ大きい目なので取れる → moveに追加
+              moves.push({ from: [r, c], to: [br, bc] });
+            }
+            break; // それ以降進めない
+          }
+
+          // 敵がいて取れる場合
+          if (target) {
+            if (target.player === player) break; // 味方 → 進めない
+            if (piece.top < target.top) {
+              moves.push({ from: [r, c], to: [nr, nc] });
+            }
+            break;
+          }
+
+          // 空きマス
+          moves.push({ from: [r, c], to: [nr, nc] });
+        }
+      }
+    }
+  }
+  return moves;
+}
+
+
+
+
+function applyMove(boardState, move) {
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  const piece = boardState[fr][fc];
+  const dx = tc - fc;
+  const dy = tr - fr;
+  const newDie = moveDie(piece, dx, dy);
+  boardState[tr][tc] = { ...piece, ...newDie };
+  boardState[fr][fc] = null;
+  return boardState;
+}
+
+
+
+
+function checkmate(color) {
+  if (!isInCheck(color)) return false; // まずチェックでなければ詰みでない
+
+  const moves = generateMoves(color, state);
+  for (const move of moves) {
+    const newBoard = applyMove(cloneBoard(state), move);
+    if (!isInCheckAfterMove(color, newBoard)) {
+      return false; // 逃げ道があるなら詰みではない
+    }
+  }
+  return true; // 全ての合法手を試してもチェック回避できなければ詰み
+}
+setup();
+</script>
+
+</body>
+</html>

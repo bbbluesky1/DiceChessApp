@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Room Setup</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+</head>
+<body>
+  <button onclick="createRooms()">ルーム作成</button>
+
+  <script>
+    // Firebaseの初期化
+    const firebaseConfig = {
+      apiKey: "AIzaSyAFQI1E8pspRrSHECSzh5mQxvIGG2oqyq8",
+      authDomain: "dicechess-f5f50.firebaseapp.com",
+      databaseURL: "https://dicechess-f5f50-default-rtdb.firebaseio.com", // Realtime DB用URL
+      projectId: "dicechess-f5f50",
+      storageBucket: "dicechess-f5f50.appspot.com",
+      messagingSenderId: "612776353708",
+      appId: "1:612776353708:web:f285fa250fc6a61faae409"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    function createRooms() {
+      const updates = {};
+      for (let i = 1; i <= 100; i++) {
+        const roomPath = `rooms/room${i}`;
+        updates[roomPath] = {
+          name: "",
+          opponent: "",
+          turn: "",
+          winner: "",
+          status: "waiting",
+          moves: ""
+        };
+      }
+
+      db.ref().update(updates)
+        .then(() => alert("100部屋作成完了！"))
+        .catch((error) => console.error("作成エラー:", error));
+    }
+  </script>
+</body>
+</html>
