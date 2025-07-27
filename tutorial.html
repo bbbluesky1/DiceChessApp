@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DiceChess チュートリアル</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      overflow-x: hidden;
+      background-image: url('./space-art-5626853_640.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+
+    header {
+      background-color: #222;
+      color: white;
+      display: flex;
+      align-items: center;
+      padding: 0.8rem 1rem;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 1000;
+      justify-content: flex-start;
+      gap: 1rem;
+    }
+
+    #back-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 16px;
+  margin-right: 16px;
+  cursor: pointer;
+  user-select: none;
+}
+
+#back-button:active {
+  opacity: 0.6;
+}
+
+    .logo {
+      font-weight: bold;
+      font-size: 1.2rem;
+      flex: 1;
+      margin: auto;
+    }
+
+    .menu-toggle {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      gap: 4px;
+      z-index: 1100;
+      margin-left: auto;
+      margin-right: 16px; /* ここで右から少し余白 */
+    }
+
+    .menu-toggle div {
+      width: 24px;
+      height: 3px;
+      background-color: #fff;
+    }
+
+    nav {
+      display: none;
+      position: absolute;
+      top: 60px;
+      right: 0;
+      background-color: #444;
+      flex-direction: column;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 100;
+      min-width: 160px;
+    }
+
+    nav a {
+      color: white;
+      text-decoration: none;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #555;
+    }
+
+    
+.show-menu .main-nav {
+  display: flex;
+}
+
+    main {
+      padding: 100px 20px 40px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 1rem;
+    }
+
+    .step {
+      background: white;
+      border-radius: 12px;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .step h2 {
+      color: #2a5d84;
+      margin-top: 0;
+    }
+
+    .bot-area {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+
+    #bot-img {
+      width: 60px;
+      height: auto;
+    }
+
+    .bubble {
+      background-color: #fff;
+      border: 2px solid #888;
+      border-radius: 16px;
+      padding: 10px 14px;
+      position: relative;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+      max-width: 300px;
+    }
+
+    .bubble::after {
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: 10px;
+      width: 0;
+      height: 0;
+      border: 10px solid transparent;
+      border-right-color: #fff;
+    }
+
+    @media (max-width: 600px) {
+      main {
+        padding: 80px 12px 32px;
+      }
+
+      .bubble {
+        font-size: 0.9rem;
+      }
+
+      .bubble::after {
+        top: -10px;
+        left: 20px;
+        border: 10px solid transparent;
+        border-bottom-color: #fff;
+        border-right-color: transparent;
+      }
+
+      nav {
+        right: 10px;
+        top: 50px;
+      }
+
+      .bot-area {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <button id="back-button" aria-label="戻る">&larr;</button>
+  <div class="logo">🎲 DiceChess チュートリアル</div>
+  <div class="menu-toggle" onclick="document.body.classList.toggle('show-menu')">
+    <div></div><div></div><div></div>
+  </div>
+  <nav>
+      <a href="./home.html">Home</a>
+      <a href="./bot.html">Bot対戦</a>
+      <a href="./tutorial.html">ルール</a>
+      <a href="./login.html">オンライン対戦</a>
+      <a href="./ranking.html">ランキング</a>
+      <a href="./tsumeshogi.html">詰将棋</a>
+    </nav>
+</header>
+
+<main>
+  <div class="bot-area">
+    <img id="bot-img" src="./waving-287_256.gif" alt="bot" />
+    <div class="bubble">こんにちは！このページでルールを紹介するよ！</div>
+  </div>
+
+  <div class="step">
+    <h2>1. ゲームの目的</h2>
+    <p>敵のキング（王様）を倒すことが目的です。</p>
+  </div>
+
+  <div class="step">
+    <h2>2. サイコロの動き</h2>
+    <p>サイコロは縦・横方向に動けます。出ている目の数だけ移動できます。</p>
+    <p>移動するとサイコロが回転し、出目が変わります。</p>
+  </div>
+
+  <div class="step">
+    <h2>3. 攻撃</h2>
+    <p>移動先に敵駒がある場合、出目が相手より<strong>小さければ</strong>倒せます。</p>
+    <p>出目が<strong>大きい</strong>と攻撃できません。</p>
+  </div>
+
+  <div class="step">
+    <h2>4. 勝利条件</h2>
+    <p>相手のキングを倒すと勝利です！</p>
+  </div>
+
+  <div class="step">
+    <h2>5. その他のルール</h2>
+    <p>斜めには動けません。移動方向に敵がいたら、そこで止まり攻撃判定がされます。</p>
+  </div>
+</main>
+
+<script>
+  // メニューの切り替え
+  document.querySelector('.menu-toggle').addEventListener('click', () => {
+    document.body.classList.toggle('show-menu');
+  });
+
+  document.getElementById('back-button').addEventListener('click', () => {
+  window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
+});
+</script>
+
+</body>
+</html>

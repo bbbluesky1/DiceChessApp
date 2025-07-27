@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DiceChess</title>
+  <style>
+    :root {
+      --white-cell: #EBECD0;
+      --black-cell: #b1b1b1;
+      --board-size: min(90vw, 400px);
+      --cell-size: calc(var(--board-size) / 8);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background-image: url('./space-art-5626853_640.jpg');
+      background-size: cover;
+      background-position: center;
+      color: white;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    header {
+      position: static;
+      width: 100%;
+      height: 60px;
+      background-color: #222;
+      color: white;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+    }
+
+    #back-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      margin-right: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #back-button:active {
+      opacity: 0.6;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: auto;
+    }
+
+    .menu-toggle {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      gap: 4px;
+    }
+
+    .menu-toggle div {
+      width: 25px;
+      height: 3px;
+      background-color: #fff;
+    }
+
+    nav {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background-color: #444;
+      color: #fff;
+      display: none;
+      flex-direction: column;
+      min-width: 150px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1100;
+    }
+
+    nav a {
+      padding: 0.8rem 1rem;
+      text-decoration: none;
+      color: #fff;
+      border-bottom: 1px solid #555;
+    }
+
+    nav a:hover {
+      background-color: #555;
+    }
+
+    body.show-menu nav {
+      display: flex;
+    }
+
+    main#game-container {
+      position: static;
+      width: 100vw;
+      max-width: 100vw;
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      align-items: flex-start;
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-x: auto;
+      overflow-y: visible;
+      min-height: calc(100vh - 60px);
+    }
+
+    #board-container {
+      width: var(--board-size);
+      height: var(--board-size);
+      flex-shrink: 1;
+      max-width: 100%;
+      max-height: 100%;
+      position: relative;
+      min-width: 280px;
+    }
+
+    table#board {
+      border-collapse: collapse;
+      border: 2px solid #222;
+      width: 100%;
+      height: 100%;
+      table-layout: fixed;
+    }
+
+    td {
+      width: var(--cell-size);
+      height: var(--cell-size); /* ★ 固定 */
+      position: relative;
+      perspective: 1000px;
+      box-sizing: border-box;
+    }
+
+    td.white {
+      background-color: var(--white-cell);
+    }
+
+    td.black {
+      background-color: var(--black-cell);
+    }
+
+    td.selected {
+      outline: 3px solid yellow;
+    }
+
+    .dice {
+      width: 90%;
+      height: 90%;
+      max-width: 100%;
+      max-height: 100%;
+      position: absolute;
+      top: 5%;
+      left: 5%;
+      transform-style: preserve-3d;
+      transform-origin: center;
+      transition: transform 0.5s ease-in-out;
+      border-radius: 6px;
+    }
+
+    .face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #fff;
+      border: 1px solid #aaa;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .pip {
+      width: 6px;
+      height: 6px;
+      background: #000;
+      border-radius: 50%;
+      margin: 2px;
+    }
+
+    .front  { transform: rotateY(0deg) translateZ(15px); }
+    .back   { transform: rotateY(180deg) translateZ(15px); }
+    .right  { transform: rotateY(90deg) translateZ(15px); }
+    .left   { transform: rotateY(-90deg) translateZ(15px); }
+    .top    { transform: rotateX(90deg) translateZ(15px); }
+    .bottom { transform: rotateX(-90deg) translateZ(15px); }
+
+    .dice.king {
+      outline: 2px solid red;
+      outline-offset: 1px;
+    }
+
+    #replay-controls {
+      margin: 12px auto 0;
+      max-width: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.5);
+      color: #000;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .hidden {
+      display: none!important;
+    }
+
+    #replay-controls button {
+      flex: 1;
+      padding: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      max-width: 140px;
+    }
+
+    #replay-controls p {
+      margin: 0.3rem 0 0;
+      font-size: 0.9rem;
+    }
+
+    .ghost-wrapper {
+      opacity: 0.5;
+      transform: scale(0.5);
+      filter: brightness(60%);
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ghost-dice .face {
+      border: 1px dashed #000;
+    }
+
+    #robot-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px;
+      justify-content: center;
+    }
+
+    #robot-icon-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #robot-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 6px;
+      object-fit: cover;
+      border: 2px solid white;
+    }
+
+    #robot-name {
+      margin-top: 6px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: white;
+    }
+
+    #robot-bubble {
+      background-color: #fff;
+      color: #000;
+      border: 2px solid #888;
+      border-radius: 16px;
+      padding: 10px 14px;
+      width: 200px;
+      height: 65px;
+      font-size: 14px;
+      position: relative;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+      overflow-wrap: break-word;
+      overflow: hidden;
+      box-sizing: border-box;
+    }
+
+    #robot-bubble::before {
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: 14px;
+      width: 0;
+      height: 0;
+      border: 10px solid transparent;
+      border-right-color: #fff;
+    }
+
+    @media (max-width: 768px) {
+      main#game-container {
+        flex-direction: column;
+        height: auto;
+        padding: 10px 20px;
+      }
+
+      #board-container {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+      }
+
+      #robot-area {
+        width: 100%;
+        margin-bottom: 10px;
+      }
+
+      #replay-controls button {
+        font-size: 1.1rem;
+      }
+    }
+
+    .eval-mark {
+      font-size: 18px;
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background-color: var(--mark-bg-color);
+      border-radius: 4px;
+      padding: 1px 4px;
+      color: #000;
+    }
+
+    @media (max-width: 768px) {
+      .eval-mark {
+        font-size: 12px;
+        padding: 1px 2px;
+      }
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #333;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: #fff;
+      color: #000;
+      padding: 20px 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 80%;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .modal-content button {
+      margin-top: 20px;
+      padding: 8px 16px;
+      font-size: 1rem;
+      border: none;
+      background: #4285F4;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background: #3367d6;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <button id="back-button" aria-label="戻る">&larr;</button>
+    <div class="logo">🎲 DiceChess</div>
+    <div class="menu-toggle" onclick="document.body.classList.toggle('show-menu')">
+      <div></div><div></div><div></div>
+    </div>
+    <nav>
+      <a href="./home.html">Home</a>
+      <a href="./bot.html">Bot対戦</a>
+      <a href="./tutorial.html">ルール</a>
+      <a href="./login.html">オンライン対戦</a>
+      <a href="./ranking.html">ランキング</a>
+      <a href="./tsumeshogi.html">詰将棋</a>
+    </nav>
+  </header>
+
+  <main id="game-container">
+    <div id="robot-area">
+      <div id="robot-icon-name">
+        <img src="./human-5894669_640.jpg" alt="Bot" id="robot-avatar" />
+        <span id="robot-name">🤖 Bot</span>
+      </div>
+      <div id="robot-bubble">こんにちは！ゲームを始めましょう！</div>
+    </div>
+
+    <div id="board-container">
+      <table id="board"></table>
+      <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
+      <div id="replay-controls" class="hidden">
+        <div id="loading-spinner" class="spinner" style="display: none;"></div>
+        <button id="prev-button" onclick="prevMove()">⏮</button>
+        <button id="next-button" onclick="nextMove()">⏭</button>
+        <p id="move-description"></p>
+        <p id="evaluation"></p>
+      </div>
+    </div>
+  </main>
+
+  <div id="custom-modal" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <button onclick="closeModal()">OK</button>
+    </div>
+  </div>
+
+
+<script>
+
+  function showModal(message) {
+    document.getElementById("modal-message").innerText = message;
+    document.getElementById("custom-modal").classList.remove("hidden");
+  }
+
+  function closeModal() {
+    document.getElementById("custom-modal").classList.add("hidden");
+  }
+
+document.getElementById('back-button').addEventListener('click', () => {
+  window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
+});
+
+
+let moveHistory = []; // 棋譜保存
+
+let currentReplayIndex = -1;
+let boardStates = []; // 各局面のボード状態のスナップショット
+
+function endGame() {
+  document.getElementById("replay-controls").classList.remove("hidden");
+  prepareReplayStates(); // 後述
+}
+
+
+function renderBoard(customState) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const td = board.rows[r].cells[c];
+      td.classList.remove("selected");
+      td.innerHTML = "";
+
+      const piece = customState[r][c];
+      if (piece) {
+        const dice = createDiceElement(piece);
+        td.appendChild(dice);
+        console.log('top:', piece.top, 'diceRotations:', diceRotations[piece.top]);
+      }
+    }
+  }
+  
+
+  // リプレイ中はゴーストを描画しない（または必要に応じて処理を追加）
+}
+
+
+function createInitialBoard() {
+  const initialSetup = [
+    [5, 3, 3, 2, 6, 3, 3, 5],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [5, 3, 3, 6, 2, 3, 3, 5]
+  ];
+
+  const board = [];
+
+  for (let i = 0; i < 8; i++) {
+    board[i] = [];
+    for (let j = 0; j < 8; j++) {
+      const value = initialSetup[i][j];
+      const player = i < 2 ? 'black' : i > 5 ? 'white' : null;
+
+      if (value == null || player == null) {
+        board[i][j] = null;
+      } else {
+        const isKing = value === 2; // キングの条件が2のときだけなら
+        board[i][j] = createPiece(value, player === 'white' ? '#fff' : '#222', player, isKing);
+      }
+    }
+  }
+
+  return board;
+}
+
+
+
+function recordMove(player, from, to, pieceBefore, pieceAfter, captured = null) {
+  moveHistory.push({
+  turn: moveHistory.length + 1,
+  player,
+  from,
+  to,
+  pieceBefore: { top: pieceBefore.top, id: pieceBefore.id, player: pieceBefore.player, isKing: pieceBefore.isKing },
+  pieceAfter: { top: pieceAfter.top, id: pieceAfter.id, player: pieceAfter.player, isKing: pieceAfter.isKing },
+  captured: captured ? { top: captured.top, id: captured.id, player: captured.player, isKing: captured.isKing } : null,
+});
+}
+
+
+function showMoveHistory() {
+  console.log("=== 棋譜 ===");
+  moveHistory.forEach(move => {
+    const { turn, player, from, to, pieceBefore, pieceAfter, captured } = move;
+    console.log(
+      `${turn}. ${player}: [${from}] → [${to}] ${captured ? `(取:${captured.top})` : ""}`
+    );
+  });
+}
+
+// 棋譜を分析して表示する関数
+function analyzeMoves() {
+  const log = moveHistory.map((move, index) => {
+    const from = `(${move.from[0]},${move.from[1]})`;
+    const to = `(${move.to[0]},${move.to[1]})`;
+    const piece = `${move.pieceBefore.player}${move.pieceBefore.top}`;
+    const capture = move.captured ? ` captures ${move.captured.player}${move.captured.top}` : '';
+    return `${index + 1}. ${move.player} ${piece} ${from} → ${to}${capture}`;
+  }).join('\n');
+  console.log("棋譜:\n" + log);
+}
+
+function prepareReplayStates() {
+  boardStates = [];
+
+  let tempBoard = createInitialBoard(); // 初期状態に戻す
+  boardStates.push(cloneBoard(tempBoard));
+
+  moveHistory.forEach((move) => {
+    applyMove(tempBoard, move); // 仮想ボードで1手ずつ再現
+    boardStates.push(cloneBoard(tempBoard));
+  });
+
+  currentReplayIndex = 0;
+  showReplayMove();
+}
+
+function cloneBoard(board) {
+  return board.map(row =>
+    row.map(piece =>
+      piece ? {
+        ...piece,
+        top: Number(piece.top),  // ここで保証
+      } : null
+    )
+  );
+}
+
+
+function applyMove(board, move) {
+  const { from, to, pieceAfter } = move;
+
+  // 新しい駒状態を再生成（反転含む）
+  const newPiece = createPiece(
+    pieceAfter.top,
+    pieceAfter.player,
+    pieceAfter.player,
+    pieceAfter.isKing
+  );
+
+  board[from.row][from.col] = null;
+  board[to.row][to.col] = newPiece;
+}
+
+
+function getMoveEvaluationMark(before, after) {
+  const diff = before - after;
+  if (diff >= 15) return { mark: "!!", color: "#AAF0D1" };        // パールグリーン
+  if (diff >= 12) return { mark: "!",  color: "#87CEFA" };        // 青
+  if (diff >= 9)  return { mark: "☆", color: "#98FB98" };         // 黄緑
+  if (diff >= 6)  return { mark: "👍", color: "#98FB98" };         // 緑
+  if (diff >= 3)  return { mark: "✅", color: "#90EE90" };         // 深緑
+  if (diff > -3)  return { mark: "?!", color: "#FFFF99" };        // 黄色
+  if (diff > -6)  return { mark: "?",  color: "#FFD580" };        // オレンジ
+  if (diff > -9)  return { mark: "×",  color: "#FFB6C1" };        // 薄赤
+  return              { mark: "??", color: "#FF0000" };           // 濃赤
+}
+
+
+
+
+
+
+ async function showReplayMove() {
+  const spinner = document.getElementById("loading-spinner");
+  spinner.style.display = "block"; // スピナー表示
+
+  // イベントループに制御を戻して画面描画を確実に行う
+  await new Promise(resolve => setTimeout(resolve, 0));
+
+  const move = moveHistory[currentReplayIndex - 1];
+  const board = boardStates[currentReplayIndex];
+  renderBoard(board);
+
+  const desc = move
+    ? `${currentReplayIndex}. ${move.player} (${move.from[0]},${move.from[1]}) → (${move.to[0]},${move.to[1]})`
+    : "初期局面";
+  document.getElementById("move-description").innerText = desc;
+
+  const prevBoard = boardStates[currentReplayIndex - 1];
+  const currentBoard = boardStates[currentReplayIndex];
+
+  const nextPlayer = move?.player === "white" ? "black" : "white";
+
+  const depth = 3;
+  const beforeScore = evaluateBoardDeep(prevBoard, depth, true, nextPlayer);
+  const afterScore = evaluateBoardDeep(currentBoard, depth, true, nextPlayer);
+  const diff = beforeScore - afterScore;
+
+  const { mark, color } = getMoveEvaluationMark(beforeScore, afterScore);
+
+  document.getElementById("evaluation").innerText = `評価値差: ${diff} ${mark}`;
+
+  // マスにマーク表示
+  if (move) {
+    const [r, c] = move.to;
+    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+    if (cell) {
+      cell.style.position = "relative";
+      const existingMark = cell.querySelector(".eval-mark");
+      if (existingMark) existingMark.remove();
+
+      const markSpan = document.createElement("span");
+      markSpan.innerText = mark;
+      markSpan.classList.add("eval-mark");
+      markSpan.style.backgroundColor = color;
+      cell.appendChild(markSpan);
+    }
+  }
+
+  spinner.style.display = "none"; // スピナー非表示
+}
+
+
+
+
+
+function nextMove() {
+  if (currentReplayIndex < boardStates.length - 1) {
+    currentReplayIndex++;
+    showReplayMove();
+  }
+}
+
+function prevMove() {
+  if (currentReplayIndex > 0) {
+    currentReplayIndex--;
+    showReplayMove();
+  }
+}
+
+////////////////////////////////////////////
+
+
+  function updateRobotMessage(message) {
+  const bubble = document.getElementById('robot-bubble');
+  if (bubble) {
+    bubble.textContent = message;
+  }
+}
+
+const board = document.getElementById("board");
+//const status = document.getElementById("status");
+const SIZE = 8;
+let selected = null;
+let currentPlayer = "white";
+const state = [];
+
+const diceRotations = {
+  1: 'rotateX(0deg) rotateY(0deg)',
+  2: 'rotateX(-90deg) rotateY(0deg)',
+  3: 'rotateY(-90deg)',
+  4: 'rotateY(90deg)',
+  5: 'rotateX(90deg) rotateY(0deg)',
+  6: 'rotateX(180deg) rotateY(0deg)'
+};
+
+const pipsMap = {
+  1: [4],
+  2: [0, 8],
+  3: [0, 4, 8],
+  4: [0, 2, 6, 8],
+  5: [0, 2, 4, 6, 8],
+  6: [0, 2, 3, 5, 6, 8]
+};
+
+function createPiece(top, color, player, isKing = false) {
+  let die;
+
+   switch (top) {
+    case 1:
+      die = { top: 1, bottom: 6, left: 4, right: 3, front: 2, back: 5 };
+      break;
+    case 2:
+      die = { top: 2, bottom: 5, left: 4, right: 3, front: 6, back: 1 };
+      break;
+    case 3:
+      die = { top: 3, bottom: 4, left: 6, right: 1, front: 2, back: 5 };
+      break;
+    case 4:
+      die = { top: 4, bottom: 3, left: 1, right: 6, front: 2, back: 5 };
+      break;
+    case 5:
+      die = { top: 5, bottom: 2, left: 4, right: 3, front: 1, back: 6 };
+      break;
+    case 6:
+      die = { top: 6, bottom: 1, left: 4, right: 3, front: 5, back: 2 };
+      break;
+    default:
+      throw new Error("Invalid top value");
+  }
+
+  // 黒なら左右・前後を反転
+  if (player=="black") {
+    [die.left, die.right] = [die.right, die.left];
+    [die.front, die.back] = [die.back, die.front];
+  }
+
+  return { ...die, color, player, isKing };
+}
+
+function playDiceRollSound() {
+  const audio = document.getElementById('dice-roll-sound');
+  if (audio) {
+    audio.currentTime = 0; // 巻き戻し（連続再生用）
+    audio.play();
+  }
+}
+
+function rollDie(die, direction) {
+  const newDie = { ...die };
+
+  switch (direction) {
+    case "up":
+      newDie.top = die.back;
+      newDie.bottom = die.front;
+      newDie.front = die.top;
+      newDie.back = die.bottom;
+      break;
+    case "down":
+      newDie.top = die.front;
+      newDie.bottom = die.back;
+      newDie.front = die.bottom;
+      newDie.back = die.top;
+      break;
+    case "left":
+      newDie.top = die.right;
+      newDie.bottom = die.left;
+      newDie.left = die.top;
+      newDie.right = die.bottom;
+      break;
+    case "right":
+      newDie.top = die.left;
+      newDie.bottom = die.right;
+      newDie.left = die.bottom;
+      newDie.right = die.top;
+      break;
+  }
+
+  return newDie;
+}
+
+function moveDie(originalDie, dx, dy) {
+  let die = { ...originalDie };
+
+  const step = (dir, count) => {
+    for (let i = 0; i < count; i++) {
+      die = rollDie(die, dir);
+    }
+  };
+
+  if (dy < 0) step("up", -dy);
+  else if (dy > 0) step("down", dy);
+
+  if (dx < 0) step("left", -dx);
+  else if (dx > 0) step("right", dx);
+
+  return die;
+}
+
+
+function setup() {
+  for (let r = 0; r < SIZE; r++) {
+    const row = [];
+    const tr = document.createElement("tr");
+    for (let c = 0; c < SIZE; c++) {
+      const td = document.createElement("td");
+      td.dataset.row = r;
+      td.dataset.col = c;
+      td.className = (r + c) % 2 === 0 ? "white" : "black";
+      td.addEventListener("click", onCellClick);
+      tr.appendChild(td);
+      row.push(null);
+    }
+    board.appendChild(tr);
+    state.push(row);
+  }
+
+  const backRank = [5, 3, 3, 6, 2, 3, 3, 5];
+  const reversedBackRank = [...backRank].reverse();
+  for (let i = 0; i < SIZE; i++) {
+  state[7][i] = createPiece(backRank[i], "", "white", backRank[i] === 2);
+  state[6][i] = createPiece(1, "", "white");
+
+  state[0][i] = createPiece(reversedBackRank[i], "", "black", reversedBackRank[i] === 2);
+  state[1][i] = createPiece(1, "", "black");
+}
+
+
+  render();
+}
+
+let ghostMoves = [];
+
+function getGhostMoves(piece, sr, sc) {
+  if (!piece) return [];
+
+  const moves = [];
+  const directions = [
+    { dr: -1, dc: 0 }, // 上
+    { dr: 1, dc: 0 },  // 下
+    { dr: 0, dc: -1 }, // 左
+    { dr: 0, dc: 1 }   // 右
+  ];
+
+  directions.forEach(({ dr, dc }) => {
+    for (let i = 1; i <= piece.top; i++) {
+      const r = sr + dr * i;
+      const c = sc + dc * i; //
+      if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) break;
+
+      const target = state[r][c];
+      const newDie = moveDie(piece, dc * i, dr * i);
+
+      if (target) {
+        if (target.player === piece.player) break;
+            
+        if (piece.top < target.top) {
+          moves.push({ r, c, piece: { ...piece, ...newDie } });
+        }
+      
+        break;
+      } else {
+        moves.push({ r, c, piece: { ...piece, ...newDie } });
+      }
+    }
+  });
+
+  return moves;
+}
+
+function createDiceElement(piece, isGhost = false) {
+  const wrapper = document.createElement("div"); // ゴースト用ラッパー
+  const dice = document.createElement("div");
+  dice.id = `piece-${piece.id}`; // ID追加
+
+  const colorClass = piece.isKing
+    ? (piece.player === "white" ? "red-dice" : "blue-dice")
+    : (piece.player === "white" ? "white-dice" : "black-dice");
+
+  dice.className = `dice ${colorClass}`;
+  dice.style.transform = diceRotations[Number(piece.top)];
+  dice.dataset.rotation = "0,0";
+
+  if (isGhost) {
+    wrapper.className = "ghost-wrapper";
+    dice.classList.add("ghost-dice");
+  }
+
+  ["front", "back", "right", "left", "top", "bottom"].forEach((side) => {
+    const face = document.createElement("div");
+    face.className = `face ${side}`;
+    face.style.background = piece.isKing
+      ? (piece.player === "white" ? "#c00" : "#06c")
+      : (piece.player === "white" ? "#fff" : "#222");
+
+    const faceNumberMap = {
+      front: 1,
+      back: 6,
+      right: 3,
+      left: 4,
+      top: 2,
+      bottom: 5,
+    };
+    const faceNum = faceNumberMap[side];
+    pipsMap[faceNum].forEach(i => {
+      const pip = document.createElement("div");
+      pip.className = "pip";
+      pip.style.backgroundColor = piece.player === "white" ? "#000" : "#fff";
+      face.appendChild(pip);
+    });
+    dice.appendChild(face);
+  });
+
+  if (isGhost) {
+    wrapper.appendChild(dice);
+    return wrapper;
+  }
+
+  return dice;
+}
+
+// サイコロの累積回転角度（グローバル変数でも、diceElement.datasetでも可）
+let rotationX = 0;
+let rotationY = 0;
+let rotationZ = 0;
+
+function animateDiceMoveSmooth(diceElement, dx, dy, duration = 0.3) {
+  return new Promise((resolve) => {
+    const tileSize = 60;
+    if (dx === 0 && dy === 0 || duration <= 0) {
+      resolve();
+      return;
+    }
+
+    const moveX = dx * tileSize;
+    const moveY = dy * tileSize;
+
+    // サイコロの回転（1マス分だけ対応）
+    const rotateX = dy === -1 ? 90 : dy === 1 ? -90 : 0;
+    const rotateY = dx === 1 ? 90 : dx === -1 ? -90 : 0;
+
+    // 現在の位置と回転を取得
+    const startX = parseFloat(diceElement.dataset.posX || "0");
+    const startY = parseFloat(diceElement.dataset.posY || "0");
+    const startRotateX = parseFloat(diceElement.dataset.rotateX || "0");
+    const startRotateY = parseFloat(diceElement.dataset.rotateY || "0");
+
+    const targetX = startX + moveX;
+    const targetY = startY + moveY;
+    const targetRotateX = startRotateX + rotateX;
+    const targetRotateY = startRotateY + rotateY;
+
+    diceElement.style.position = "absolute";
+
+    const startTime = performance.now();
+
+    function step(now) {
+      const elapsed = (now - startTime) / 1000;
+      const progress = Math.min(elapsed / duration, 1);
+
+      const currentX = startX + (targetX - startX) * progress;
+      const currentY = startY + (targetY - startY) * progress;
+      const currentRotateX = startRotateX + (targetRotateX - startRotateX) * progress;
+      const currentRotateY = startRotateY + (targetRotateY - startRotateY) * progress;
+
+      diceElement.style.transform = `
+        translate(${currentX}px, ${currentY}px)
+        rotateX(${currentRotateX}deg)
+        rotateY(${currentRotateY}deg)
+      `;
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      } else {
+        // 最終状態に固定
+        diceElement.dataset.posX = targetX;
+        diceElement.dataset.posY = targetY;
+        diceElement.dataset.rotateX = targetRotateX;
+        diceElement.dataset.rotateY = targetRotateY;
+
+        diceElement.style.transform = `
+          translate(${targetX}px, ${targetY}px)
+          rotateX(${targetRotateX}deg)
+          rotateY(${targetRotateY}deg)
+        `;
+        resolve();
+      }
+    }
+
+    requestAnimationFrame(step);
+  });
+}
+
+async function animateMoveAndUpdateState(sr, sc, directions, piece) {
+  let currentDie = { ...piece };
+  let row = sr;
+  let col = sc;
+
+  for (const dir of directions) {
+    const dr = dir === "up" ? -1 : dir === "down" ? 1 : 0;
+    const dc = dir === "left" ? -1 : dir === "right" ? 1 : 0;
+    const nr = row + dr;
+    const nc = col + dc;
+    
+    const diceElem = board.rows[row].cells[col].querySelector(".dice");
+
+    // 出目更新
+    currentDie = rollDie(currentDie, dir);
+
+    // アニメーション
+    await animateDiceMoveSmooth(diceElem, dc, dr);
+    playDiceRollSound();
+
+    // DOM操作でマス移動（renderなし）
+    board.rows[row].cells[col].innerHTML = "";
+    board.rows[nr].cells[nc].appendChild(diceElem);
+
+    // 内部状態更新
+    state[nr][nc] = { ...piece, ...currentDie };
+    state[row][col] = null;
+
+    // dice の表示を更新
+    render();
+
+    row = nr;
+    col = nc;
+  }
+
+  ghostMoves = [];
+  selected = null;
+  render(); // 最後にまとめて再描画
+}
+
+
+
+function moveDie(originalDie, dx, dy) {
+  let die = { ...originalDie };
+
+  const step = (dir, count) => {
+    for (let i = 0; i < count; i++) {
+      die = rollDie(die, dir);
+    }
+  };
+
+  if (dy < 0) step("up", -dy);
+  else if (dy > 0) step("down", dy);
+
+  if (dx < 0) step("left", -dx);
+  else if (dx > 0) step("right", dx);
+
+  return die;
+}
+
+
+
+
+function render() {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const td = board.rows[r].cells[c];
+      td.classList.remove("selected");
+      td.innerHTML = "";
+      const piece = state[r][c];
+      if (piece) {
+        const dice = createDiceElement(piece);
+        td.appendChild(dice);
+      }
+    }
+  }
+
+  // ゴースト描画
+console.log(`Ghost moves: `, ghostMoves);
+ghostMoves.forEach(({ r, c, piece }) => {
+  const td = board.rows[r].cells[c];
+  const ghost = createDiceElement(piece, true);
+  console.log(`Appending ghost to cell at [${r}, ${c}]`);
+  td.appendChild(ghost);
+});
+
+
+}
+
+async function onCellClick(e) {
+  const row = parseInt(e.currentTarget.dataset.row);
+  const col = parseInt(e.currentTarget.dataset.col);
+  const cell = state[row][col];
+  ghostMoves = getGhostMoves(selected, row, col);
+  render();
+
+  if (!selected && cell && cell.player === currentPlayer) {
+    selected = [row, col];
+    ghostMoves = getGhostMoves(cell, row, col);
+    render();
+    board.rows[row].cells[col].classList.add("selected");
+    return;
+  }
+
+  if (selected) {
+    const [sr, sc] = selected;
+    const piece = state[sr][sc];
+    const target = state[row][col];
+
+    // 自駒がターゲットにいたら動けない
+    if (target && target.player === piece.player) {
+      selected = null;
+      ghostMoves = [];
+      render();
+      return;
+    }
+
+    const dr = row - sr;
+    const dc = col - sc;
+    const isStraight = (dr === 0 || dc === 0);
+    const distance = Math.max(Math.abs(dr), Math.abs(dc));
+    const inRange = distance <= piece.top;
+
+    if (!isStraight || !inRange) {
+      selected = null;
+      ghostMoves = [];
+      render();
+      return;
+    }
+
+    const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+    const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+    let r = sr + stepR;
+    let c = sc + stepC;
+    let foundEnemy = null;
+
+    while (r !== row || c !== col) {
+      const mid = state[r][c];
+      if (mid) {
+        if (mid.player === piece.player) {
+          selected = null;
+          ghostMoves = [];
+          render();
+          return;
+        } else {
+          if (foundEnemy) {
+            selected = null;
+            ghostMoves = [];
+            render();
+            return;
+          }
+          foundEnemy = { ...mid, row: r, col: c };
+        }
+      }
+      r += stepR;
+      c += stepC;
+    }
+
+    const dx = col - sc;
+    const dy = row - sr;
+    const newDie = moveDie(piece, dx, dy);
+
+    // 条件を満たした場合だけアニメーション後に更新
+    const directions = [];
+    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+
+    // 敵がいて取れるパターン（終点にいる場合）
+    if (target) {
+      if (target.player !== piece.player && piece.top < target.top) {
+        await animateMoveAndUpdateState(sr, sc, directions, piece);
+        state[row][col] = { ...piece, ...newDie };
+        state[sr][sc] = null;
+        ghostMoves = [];
+        selected = null;
+        recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
+        render();
+        if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
+          showModal("White wins!");
+          endGame();
+          return;
+        }
+        if (checkmate("black")) {
+          setTimeout(() => {
+            showModal("White wins!");
+            endGame();
+          }, 2000);
+          return;
+        }
+        endTurn(piece.player);
+        return;
+      } else {
+        selected = null;
+        ghostMoves = [];
+        render();
+        return;
+      }
+    }
+
+    // 敵が途中にいて止まる条件を満たす場合
+    if (foundEnemy) {
+      if (piece.top < foundEnemy.top && foundEnemy.row === row && foundEnemy.col === col) {
+        await animateMoveAndUpdateState(sr, sc, directions, piece);
+        state[row][col] = { ...piece, ...newDie };
+        state[sr][sc] = null;
+        ghostMoves = [];
+        selected = null;
+        recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
+        render();
+        if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
+          showModal("White wins!");
+          endGame();
+          return;
+        }
+        if (checkmate("black")) {
+          setTimeout(() => {
+            showModal("White wins!");
+            endGame();
+          }, 2000);
+          return;
+        }
+        endTurn(piece.player);
+        return;
+      } else {
+        selected = null;
+        ghostMoves = [];
+        render();
+        return;
+      }
+    }
+
+    // 通常移動
+    await animateMoveAndUpdateState(sr, sc, directions, piece);
+    state[row][col] = { ...piece, ...newDie };
+    state[sr][sc] = null;
+    recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
+    ghostMoves = [];
+    selected = null;
+    render();
+    endTurn(piece.player);
+  }
+}
+
+
+
+
+
+
+
+function hasPieceInBetween(sr, sc, row, col, board = state) {
+  const dr = row - sr;
+  const dc = col - sc;
+  const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+  const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+  let r = sr + stepR;
+  let c = sc + stepC;
+
+  while (r !== row || c !== col) {
+    if (board[r][c]) {
+      return { blocked: true, piece: board[r][c] };
+    }
+    r += stepR;
+    c += stepC;
+  }
+  return { blocked: false, piece: null };
+}
+
+function endTurn(player) {
+  currentPlayer = player === "white" ? "black" : "white";
+  updateRobotMessage(`${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`);
+  //status.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`;
+  botTurn();
+}
+
+/*
+function checkWin(attacker) {// checkmate()に変更
+  if (checkmate(attacker)) {
+    showModal(`checkmate! ${attacker} wins!`);
+    endGame();
+    return;
+  }
+  endTurn(attacker);
+}
+  */
+
+
+
+
+
+
+async function botTurn() {
+  updateRobotMessage("Black（Bot）考え中...");
+  //status.textContent = "Black（Bot）考え中...";
+
+  // 考え中アニメーションの代わりに少し待つ（オプション）
+  await new Promise(resolve => setTimeout(resolve, 300));
+
+  const moves = generateMoves("black", state);
+  if (moves.length === 0) {
+    showModal("Botは動けません！");
+    currentPlayer = "white";
+    updateRobotMessage("Whiteのターン");
+    //status.textContent = "Whiteのターン";
+    return;
+  }
+
+  let bestScore = -Infinity;
+  let bestMove = null;
+
+  for (let move of moves) {
+    const testState = applyMove(cloneBoard(state), move);
+    let score = minimax(testState, 3, -Infinity, Infinity, false);
+
+    const [tr, tc] = move.to;
+    if (state[tr][tc] && state[tr][tc].color === "white") {
+      score += 100;
+      if (state[tr][tc].isKing) score += 300;
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = move;
+    }
+  }
+
+  if (bestMove) {
+    const [fr, fc] = bestMove.from;
+    const [tr, tc] = bestMove.to;
+    const piece = state[fr][fc];
+    const dx = tc - fc;
+    const dy = tr - fr;
+    const newDie = moveDie(piece, dx, dy);
+
+    const diceElement = board.rows[fr].cells[fc].querySelector(".dice");
+
+    //animation
+    render(); // まず描画
+    await new Promise(requestAnimationFrame); // 1フレーム待つことでDOMが確実に反映される
+    const directions = [];
+    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+    await animateMoveAndUpdateState(fr, fc, directions, piece);
+
+    // アニメーション後に移動を反映
+    state[tr][tc] = { ...piece, ...newDie };
+    state[fr][fc] = null;
+    // 棋譜記録
+    recordMove(currentPlayer, [fr, fc], [tr, tc], piece, newDie);
+    render();
+
+   if (currentPlayer === 'black' && state[tr][tc]?.isKing && state[tr][tc]?.color === 'white') {
+  showModal("Black wins!");
+  endGame();
+  return;
+}
+  if (checkmate("white")) {
+    setTimeout(() => {
+      showModal("Black wins!");
+      endGame();
+    }, 2000);
+    return;
+  }
+}
+
+  currentPlayer = "white";
+  updateRobotMessage("Whiteのターン");
+  //status.textContent = "Whiteのターン";
+  selected = null;
+}
+
+
+
+
+
+function cloneBoard(boardState) {
+  return boardState.map(row => row.map(cell => cell ? { ...cell } : null));
+}
+
+function evaluateBoardDeep(board, depth, isMaximizingPlayer, perspective) {
+  if (depth === 0) return evaluateBoard(board, perspective);
+
+  const player = isMaximizingPlayer ? perspective : (perspective === "black" ? "white" : "black");
+  const moves = generateMoves(player,board);
+
+  if (moves.length === 0) {
+    // 手がない → 投了
+    return isMaximizingPlayer ? -Infinity : Infinity;
+  }
+
+  const scores = moves.map(move => {
+    const newBoard = applyMove(cloneBoard(board), move);
+    return evaluateBoardDeep(newBoard, depth - 1, !isMaximizingPlayer, perspective);
+  });
+
+  return isMaximizingPlayer ? Math.max(...scores) : Math.min(...scores);
+}
+
+
+function evaluateBoard(board, perspective = "black") {
+  let score = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+      if (piece) {
+        let baseValue = 10 + piece.top;
+        if (piece.isKing) baseValue += 50;
+        const advanceBonus = piece.player === "black" ? (7 - r) : r;
+        baseValue += advanceBonus;
+
+        // 指定されたプレイヤーから見た評価値
+        score += (piece.player === perspective) ? baseValue : -baseValue;
+      }
+    }
+  }
+
+  return score;
+}
+
+
+function hasBlockingPiece(sr, sc, er, ec, board) {
+  const dr = Math.sign(er - sr);
+  const dc = Math.sign(ec - sc);
+  let r = sr + dr;
+  let c = sc + dc;
+  while (r !== er || c !== ec) {
+    if (board[r][c]) return true;
+    r += dr;
+    c += dc;
+  }
+  return false;
+}
+
+function getBlockingPosition(sr, sc, dr, dc, board) {
+  let r = sr + dr;
+  let c = sc + dc;
+  while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+    if (board[r][c]) return [r, c];
+    r += dr;
+    c += dc;
+  }
+  return [-1, -1];
+}
+
+
+function generateMoves(player, boardState) {
+  const moves = [];
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = boardState[r][c];
+      if (!piece || piece.player !== player) continue;
+      const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
+
+      for (const [dr, dc] of dirs) {
+        for (let dist = 1; dist <= piece.top; dist++) {
+          const nr = r + dr * dist;
+          const nc = c + dc * dist;
+          if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) break;
+
+          const target = boardState[nr][nc];
+
+          // 中間に駒がある場合、そこが敵ならそこで止まる
+          if (hasBlockingPiece(r, c, nr, nc, boardState)) {
+            const [br, bc] = getBlockingPosition(r, c, dr, dc, boardState);
+            const blocking = boardState[br][bc];
+            if (blocking && blocking.player !== player && piece.top < blocking.top) {
+              // 敵で、かつ大きい目なので取れる → moveに追加
+              moves.push({ from: [r, c], to: [br, bc] });
+            }
+            break; // それ以降進めない
+          }
+
+          // 敵がいて取れる場合
+          if (target) {
+            if (target.player === player) break; // 味方 → 進めない
+            if (piece.top < target.top) {
+              moves.push({ from: [r, c], to: [nr, nc] });
+            }
+            break;
+          }
+
+          // 空きマス
+          moves.push({ from: [r, c], to: [nr, nc] });
+        }
+      }
+    }
+  }
+  return moves;
+}
+
+
+
+function minimax(boardState, depth, alpha, beta, maximizingPlayer) {
+  const winner = checkWinner(boardState);
+  if (winner === "black") return 1000;
+  if (winner === "white") return -1000;
+
+  if (depth === 0) return evaluateBoard(boardState,"black");
+
+  const player = maximizingPlayer ? "black" : "white";
+  const moves = generateMoves(player, boardState);
+
+  if (maximizingPlayer) {
+    let maxEval = -Infinity;
+    for (const move of moves) {
+      const newBoard = applyMove(cloneBoard(boardState), move);
+      const eval = minimax(newBoard, depth - 1, alpha, beta, false);
+      maxEval = Math.max(maxEval, eval);
+      alpha = Math.max(alpha, eval);
+      if (beta <= alpha) break; // βカット
+    }
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+    for (const move of moves) {
+      const newBoard = applyMove(cloneBoard(boardState), move);
+      const eval = minimax(newBoard, depth - 1, alpha, beta, true);
+      minEval = Math.min(minEval, eval);
+      beta = Math.min(beta, eval);
+      if (beta <= alpha) break; // αカット
+    }
+    return minEval;
+  }
+}
+
+
+function applyMove(boardState, move) {
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  const piece = boardState[fr][fc];
+  const dx = tc - fc;
+  const dy = tr - fr;
+  const newDie = moveDie(piece, dx, dy);
+  boardState[tr][tc] = { ...piece, ...newDie };
+  boardState[fr][fc] = null;
+  return boardState;
+}
+
+function checkWinner(boardState) {
+  let hasWhiteKing = false;
+  let hasBlackKing = false;
+  for (let row of boardState) {
+    for (let piece of row) {
+      if (piece?.isKing) {
+        if (piece.player === "white") hasWhiteKing = true;
+        if (piece.player === "black") hasBlackKing = true;
+      }
+    }
+  }
+  if (!hasWhiteKing) return "black";
+  if (!hasBlackKing) return "white";
+  return null;
+}
+
+function isInCheck(color) {
+  return isInCheckAfterMove(color, state);
+}
+
+
+function isInCheckAfterMove(color, board) {
+  let kingPosition = null;
+
+  for (let row = 0; row < 8; row++) {
+    for (let col = 0; col < 8; col++) {
+      const piece = board[row][col];
+      if (piece && piece.player === color && piece.isKing) {
+        kingPosition = { row, col };
+        break;
+      }
+    }
+    if (kingPosition) break;
+  }
+
+  if (!kingPosition) return true; // キングがいない＝既に取られてる
+
+  const opponent = color === "white" ? "black" : "white";
+  const oppMoves = generateMoves(opponent, board);
+  for (const move of oppMoves) {
+    const [tr, tc] = move.to;
+    if (tr === kingPosition.row && tc === kingPosition.col) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function checkmate(color) {
+  if (!isInCheck(color)) return false; // まずチェックでなければ詰みでない
+
+  const moves = generateMoves(color, state);
+  for (const move of moves) {
+    const newBoard = applyMove(cloneBoard(state), move);
+    if (!isInCheckAfterMove(color, newBoard)) {
+      return false; // 逃げ道があるなら詰みではない
+    }
+  }
+  return true; // 全ての合法手を試してもチェック回避できなければ詰み
+}
+
+
+setup();
+</script>
+</body>
+</html>
