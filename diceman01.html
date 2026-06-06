@@ -2558,9 +2558,9 @@ function sleep(ms) {
   orderMoves(moves, board, botPlayer);
 
   const startTime = performance.now();
-  const TIME_LIMIT = 2000;
+  const TIME_LIMIT = 1000;
 
-for (let depth = 5; depth <= maxDepth; depth++) {
+for (let depth = 3; depth <= maxDepth; depth++) {
 
   currentDepthId++;
 
