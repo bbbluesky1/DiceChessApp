@@ -136,7 +136,7 @@
       width: 100%;
       height: 100%;
       table-layout: fixed;
-      background-image: url('./file_000000008d3871f8ba10687213b500b3.png');
+      background-image: url('./file_00000000c86871fd87c0592ceb87f55f.png');
   background-size: cover;      /* 画像をセルにフィット */
   background-position: center; /* 中央配置 */
   background-repeat: no-repeat;
@@ -305,29 +305,6 @@
       border-right-color: #fff;
     }
 
-
-.choice-buttons {
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  flex-wrap: wrap;
-  margin-top: 18px;
-}
-
-.choice-buttons button {
-  padding: 10px 16px;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  background: #4285F4;
-  color: #fff;
-}
-
-.choice-buttons button:hover {
-  background: #3367d6;
-}
-
     @media (max-width: 768px) {
       main#game-container {
         flex-direction: column;
@@ -424,6 +401,54 @@
     .modal-content button:hover {
       background: #3367d6;
     }
+    button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+#arrow-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+#svg-root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index:1000000;
+}
+.btn {
+  width: 56px;
+  height: 56px;
+
+  border-radius: 50%;
+  border: 1px solid white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+  color: white;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-black {
+  background: black;
+  color: white;
+  border: 1px solid white;
+}
+.btn-white {
+  background: white;
+  color: black;
+  border: 1px solid black;
+}
   </style>
 </head>
 <body>
@@ -447,13 +472,34 @@
   <main id="game-container">
     <div id="robot-area">
       <div id="robot-icon-name">
-        <img src="./file_000000007278720b8c70bf33be880455.png" alt="Bot" id="robot-avatar" />
+        <img src="./file_00000000800072099ee6ac3387e75384.png" alt="DiceFish" id="robot-avatar" />
         <span id="robot-name">🤖 Diceman 2.0</span>
       </div>
-      <div id="robot-bubble">Are you ready?</div>
+      <div id="robot-bubble">Initializing Diceman 2.0…</div>
+      <button id="whiteBtn" class="btn btn-white" onclick="setSide('white')">White</button>
+<button id="blackBtn" class="btn btn-black" onclick="setSide('black')">Black</button>
     </div>
+    <div id="board-container">     
+       <svg id="svg-root">
+    <defs>
+     <marker id="arrowhead"
+        markerWidth="28"
+        markerHeight="28"
+        refX="10"
+        refY="14"
+        orient="auto"
+        markerUnits="userSpaceOnUse">
+  <polygon points="0 0, 28 14, 0 14" fill="currentColor"/>
+</marker>
+    </defs>
 
-    <div id="board-container">
+    <!-- PV layer -->
+    <g id="arrow-layer-pv"></g>
+
+    <!-- UI layer -->
+    <g id="arrow-layer-ui"></g>
+
+  </svg>
       <table id="board"></table>
       <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
       <div id="replay-controls" class="hidden">
@@ -466,17 +512,6 @@
     </div>
   </main>
 
-
-<div id="start-modal" class="modal">
-  <div class="modal-content">
-    <p>Please choose whether you will play first or second.</p>
-    <div class="choice-buttons">
-      <button id="whiteBtn">White</button>
-      <button id="blackBtn">Black</button>
-    </div>
-  </div>
-</div>
-
   <div id="custom-modal" class="modal hidden">
     <div class="modal-content">
       <p id="modal-message"></p>
@@ -486,6 +521,40 @@
 
 
 <script>
+    const BOT = "lime";
+const HUMAN = "orange";
+const PV = "cyan";
+    
+    let humanPlayer = "white"; // or "black"
+let botPlayer = "black";   // 自動
+let currentPlayer = "white"; // 常に白から開始
+
+function setSide(side) {
+  humanPlayer = side;
+  botPlayer = opponent(side);
+
+  if (side === "black") {
+
+document.getElementById("board").style.transform = "rotate(180deg)";
+  } else {
+    document.getElementById("board").style.transform = "rotate(0deg)";
+    
+  }
+
+  currentPlayer = "white";
+  
+  // ★ボタン無効化
+  document.getElementById("whiteBtn").disabled = true;
+  document.getElementById("blackBtn").disabled = true;
+
+  
+  // 黒で始めるなら即bot開始
+  if (humanPlayer === "black") {
+    setTimeout(async () => {
+      await botTurn();
+    }, 300);
+  }
+}
 
   function showModal(message) {
     document.getElementById("modal-message").innerText = message;
@@ -495,41 +564,6 @@
   function closeModal() {
     document.getElementById("custom-modal").classList.add("hidden");
   }
-
-
-document.getElementById("blackBtn").addEventListener("click", () => {
-  startGame("black");
-});
-
-document.getElementById("whiteBtn").addEventListener("click", () => {
-  startGame("white");
-});
-
-function startGame(selectedColor) {
-
-if (selectedColor === "black") {
-
-document.getElementById("board").style.transform = "rotate(180deg)";
-  } else {
-    document.getElementById("board").style.transform = "rotate(0deg)";
-    
-  }
-
-
-  humanPlayer = selectedColor;
-  botPlayer = selectedColor === "white" ? "black" : "white";
-  gameStarted = true;
-  currentPlayer = "white";
-
-  document.getElementById("start-modal").classList.add("hidden");
-
-  if (currentPlayer === botPlayer) {
-    updateRobotMessage(`${botPlayer.charAt(0).toUpperCase() + botPlayer.slice(1)}（Bot）考え中...`);
-    botTurn();
-  } else {
-    updateRobotMessage(`${humanPlayer.charAt(0).toUpperCase() + humanPlayer.slice(1)}のターン`);
-  }
-}
 
 document.getElementById('back-button').addEventListener('click', () => {
   window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
@@ -776,26 +810,14 @@ function prevMove() {
   }
 }
 
-function formatColorName(color) {
-  return color.charAt(0).toUpperCase() + color.slice(1);
-}
-
-function finishGame(winnerColor) {
-  showModal(`${formatColorName(winnerColor)} wins!`);
-  endGame();
-}
-
 const board = document.getElementById("board");
 //const status = document.getElementById("status");
 const SIZE = 8;
 let selected = null;
-let currentPlayer = "white";
-let humanPlayer = "white";
-let botPlayer = "black";
-let gameStarted = false;
+currentPlayer = "white";
 const state = [];
 
-const diceRotations = {
+let diceRotations = {
   1: 'rotateX(0deg) rotateY(0deg)',
   2: 'rotateX(-90deg) rotateY(0deg)',
   3: 'rotateY(-90deg)',
@@ -1191,15 +1213,13 @@ ghostMoves.forEach(({ r, c, piece }) => {
 }
 
 async function onCellClick(e) {
-  if (!gameStarted) return;
-
   const row = parseInt(e.currentTarget.dataset.row);
   const col = parseInt(e.currentTarget.dataset.col);
   const cell = state[row][col];
   ghostMoves = getGhostMoves(selected, row, col);
   render();
 
-  if (!selected && cell && cell.player === currentPlayer && cell.player === humanPlayer) {
+  if (!selected && cell && cell.player === currentPlayer) {
     selected = [row, col];
     ghostMoves = getGhostMoves(cell, row, col);
     render();
@@ -1280,18 +1300,33 @@ async function onCellClick(e) {
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
-        const winner = checkWinner(state);
-        const opponent = piece.player === "white" ? "black" : "white";
-        if (winner) {
-          finishGame(winner);
+        if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player=== 'black') {
+          showModal("White wins!");
+          endGame();
           return;
         }
-        if (checkmate(opponent)) {
+        if (checkmate("black")) {
           setTimeout(() => {
-            finishGame(piece.player);
+            showModal("White wins!");
+            endGame();
           }, 2000);
           return;
         }
+        
+        if (currentPlayer === 'black' && state[row][col]?.isKing && state[row][col]?.player === 'white') {
+          showModal("black wins!");
+          endGame();
+          return;
+        }
+        if (checkmate("white")) {
+          setTimeout(() => {
+            showModal("black wins!");
+            endGame();
+          }, 2000);
+          return;
+        }
+        
+        
         endTurn(piece.player);
         return;
       } else {
@@ -1312,15 +1347,15 @@ async function onCellClick(e) {
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
-        const winner = checkWinner(state);
-        const opponent = piece.player === "white" ? "black" : "white";
-        if (winner) {
-          finishGame(winner);
+        if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player === 'black') {
+          showModal("White wins!");
+          endGame();
           return;
         }
-        if (checkmate(opponent)) {
+        if (checkmate("black")) {
           setTimeout(() => {
-            finishGame(piece.player);
+            showModal("White wins!");
+            endGame();
           }, 2000);
           return;
         }
@@ -1374,10 +1409,10 @@ function endTurn(player) {
   currentPlayer = player === "white" ? "black" : "white";
   updateRobotMessage(`${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`);
   //status.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`;
-
-  if (currentPlayer === botPlayer) {
-    botTurn();
-  }
+  botTurn();
+  // ★ボタン無効化
+  document.getElementById("whiteBtn").disabled = true;
+  document.getElementById("blackBtn").disabled = true;
 }
 
 /*
@@ -1393,94 +1428,9 @@ function checkWin(attacker) {// checkmate()に変更
 
 
 
-function opponent(color) {
-  return color === "black" ? "white" : "black";
-}
 
 
 
-async function botTurn() {
-  updateRobotMessage(`${botPlayer.charAt(0).toUpperCase() + botPlayer.slice(1)}（Bot）考え中...`);
-  //status.textContent = `${botPlayer.charAt(0).toUpperCase() + botPlayer.slice(1)}（Bot）考え中...`;
-
-  // 考え中アニメーションの代わりに少し待つ（オプション）
-  await new Promise(resolve => setTimeout(resolve, 300));
-
-  const moves = generateMoves(botPlayer, state);
-  if (moves.length === 0) {
-    showModal("Botは動けません！");
-    currentPlayer = humanPlayer;
-    updateRobotMessage(`${humanPlayer.charAt(0).toUpperCase() + humanPlayer.slice(1)}のターン`);
-    //status.textContent = `${humanPlayer.charAt(0).toUpperCase() + humanPlayer.slice(1)}のターン`;
-    return;
-  }
-
-    let bestScore = -Infinity;
-  let bestMove = null;
-
-  for (let move of moves) {
-    const testState = applyMove(cloneBoard(state), move);
-    
-    // ネガマックス法を呼び出す（★ここがシンプルに！）
-    // 常に「Bot（自分）から見た評価値」が返ってくるため、外側での反転処理（if文）は一切不要！
-    let score = negamax(testState, 4, -Infinity, Infinity, botPlayer);
-
-    // 駒を取るボーナス（negamax内部の評価関数に含まれていない場合のみここで足す）
-    const [tr, tc] = move.to;
-    if (state[tr][tc] && state[tr][tc].color === opponent(botPlayer)) {
-      score += 100;
-      if (state[tr][tc].isKing) score += 300;
-    }
-
-    if (score > bestScore) {
-      bestScore = score;
-      bestMove = move;
-    }
-  }
-
-  if (bestMove) {
-    const [fr, fc] = bestMove.from;
-    const [tr, tc] = bestMove.to;
-    const piece = state[fr][fc];
-    const dx = tc - fc;
-    const dy = tr - fr;
-    const newDie = moveDie(piece, dx, dy);
-
-    const diceElement = board.rows[fr].cells[fc].querySelector(".dice");
-
-    //animation
-    render(); // まず描画
-    await new Promise(requestAnimationFrame); // 1フレーム待つことでDOMが確実に反映される
-    const directions = [];
-    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
-    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
-    await animateMoveAndUpdateState(fr, fc, directions, piece);
-
-    // アニメーション後に移動を反映
-    state[tr][tc] = { ...piece, ...newDie };
-    state[fr][fc] = null;
-    // 棋譜記録
-    recordMove(currentPlayer, [fr, fc], [tr, tc], piece, newDie);
-    render();
-
-   const winner = checkWinner(state);
-  if (winner) {
-    finishGame(winner);
-    return;
-  }
-  if (checkmate(humanPlayer)) {
-    setTimeout(() => {
-      finishGame(botPlayer);
-    }, 2000);
-    return;
-  }
-}
-
-  currentPlayer = humanPlayer;
-  updateRobotMessage(`${humanPlayer.charAt(0).toUpperCase() + humanPlayer.slice(1)}のターン`);
-  //status.textContent = `${humanPlayer.charAt(0).toUpperCase() + humanPlayer.slice(1)}のターン`;
-  selected = null;
-}
 
 
 
@@ -1502,7 +1452,8 @@ function evaluateBoardDeep(board, depth, isMaximizingPlayer, perspective) {
   }
 
   const scores = moves.map(move => {
-    const newBoard = applyMove(cloneBoard(board), move);
+    const newBoard = JSON.parse(JSON.stringify(state));
+applyMovepure(newBoard, move);
     return evaluateBoardDeep(newBoard, depth - 1, !isMaximizingPlayer, perspective);
   });
 
@@ -1510,20 +1461,492 @@ function evaluateBoardDeep(board, depth, isMaximizingPlayer, perspective) {
 }
 
 
-function evaluateBoard(board, perspective = "black") {
+function kingInDanger(board, color) {
+
+  const enemyMoves = generateMoves(
+    opponent(color),
+    board
+  );
+
+  for (const move of enemyMoves) {
+
+    const tr = move.to.row ?? move.to[0];
+    const tc = move.to.col ?? move.to[1];
+
+    const target = board[tr][tc];
+
+    if (
+      target &&
+      target.player === color &&
+      target.isKing
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+
+
+
+
+const positionHistory = [];
+
+function boardKey(board) {
+  let key = "";
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      key += p ? `${p.player[0]}${p.top}${p.isKing ? "K" : ""}` : ".";
+    }
+  }
+
+  return key;
+}
+
+function repetitionCount(board) {
+
+  const key = boardKey(board)
+
+  let count = 0;
+
+  for (let i = 0; i < positionHistory.length; i++) {
+    if (positionHistory[i] === key) {
+      count++;
+    }
+  }
+
+  return count;
+}
+
+function evaluateBoard(board, perspective) {
+
   let score = 0;
+  
+  if (kingInDanger(board, perspective))
+  score -= 5000;
+
+  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
 
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
       const piece = board[r][c];
-      if (piece) {
-        let baseValue = 10 + piece.top;
-        if (piece.isKing) baseValue += 50;
-        const advanceBonus = piece.player === "black" ? (7 - r) : r;
-        baseValue += advanceBonus;
+      if (!piece) continue;
 
-        // 指定されたプレイヤーから見た評価値
-        score += (piece.player === perspective) ? baseValue : -baseValue;
+      let value = 100;
+if (piece.isKing) {
+    value += 10000;
+
+    if (piece.top === 1)
+        value += 3000;
+}
+      let mobility = 0;
+      let attackBonus = 0;
+
+      // -------------------------
+      // ① 機動力（超重要）
+      // -------------------------
+      for (const [dr, dc] of dirs) {
+        for (let dist = 1; dist <= piece.top; dist++) {
+          const nr = r + dr * dist;
+          const nc = c + dc * dist;
+
+          if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) break;
+
+          const target = board[nr][nc];
+
+          if (!target) {
+            mobility += 1; // 空マス = 動ける
+          } else {
+            if (target.player !== piece.player) {
+              attackBonus += (10 + target.top) * 0.4; // 攻撃性
+            }
+            break;
+          }
+        }
+      }
+    
+
+      // 機動力をかなり重視
+      value += mobility * 0.5;
+
+      
+      value += attackBonus * 2 * (mobility > 0 ? 0.7 : 0.3);
+
+      // -------------------------
+      // ② 前進ボーナス（控えめ）
+      // -------------------------
+      const forward = (piece.player === "white") ? (7 - r) : r;
+      value += forward * 0.2;
+
+      // -------------------------
+      // ③ 合計反映
+      // -------------------------
+      if (piece.player === perspective) {
+        score += value;
+      } else {
+        score -= value;
+      }
+    }
+  }
+  
+  score += evaluateForks(board, perspective);
+  score -= evaluateForks(
+   board,
+    perspective === "white" ? "black" : "white"
+  );
+  
+  /*
+  score += evaluateSafeCaptures(board, perspective);
+  score -= evaluateSafeCaptures(
+   board,
+    perspective === "white" ? "black" : "white"
+  );
+  */
+  
+  score += evaluatePieceCount(board, perspective);
+  score -= evaluatePieceCount(
+   board,
+    perspective === "white" ? "black" : "white"
+  );
+  
+  const count =
+  repetitionCount(board);
+
+if (count >= 2){
+score -= count*5000
+  }; 
+  
+  
+ if (checkmate(perspective === "white" ? "black" : "white",board)) score +=10000;
+ 
+ return score
+ };
+ 
+ 
+ function evaluateSafeCaptures(board, player) {
+  let score = 0;
+
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+
+      const piece = board[r][c];
+
+      if (!piece || piece.player !== player)
+        continue;
+
+      for (const [dr, dc] of dirs) {
+
+        for (let dist = 1; dist <= piece.top; dist++) {
+
+          const nr = r + dr * dist;
+          const nc = c + dc * dist;
+
+          if (
+            nr < 0 || nr >= 8 ||
+            nc < 0 || nc >= 8
+          ) {
+            break;
+          }
+
+          const target = board[nr][nc];
+
+          if (!target)
+            continue;
+
+          if (
+            target.player !== player &&
+            piece.top < target.top
+          ) {
+
+            if (
+              !canEnemyCaptureSquare(
+                board,
+                nr,
+                nc,
+                piece.top,
+                player
+              )
+            ) {
+              score += 120;
+            }
+          }
+
+          break;
+        }
+      }
+    }
+  }
+
+  return score;
+}
+
+function evaluatePieceCount(board, player) {
+  let myCount = 0;
+  let enemyCount = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+
+      if (!piece)
+        continue;
+
+      if (piece.player === player)
+        myCount++;
+      else
+        enemyCount++;
+    }
+  }
+
+  return (myCount - enemyCount) * 10;
+}
+
+function canEnemyCaptureSquare(
+  board,
+  r,
+  c,
+  pieceTop,
+  player
+) {
+
+  const enemy =
+    player === "white"
+      ? "black"
+      : "white";
+
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  for (let er = 0; er < 8; er++) {
+    for (let ec = 0; ec < 8; ec++) {
+
+      const enemyPiece = board[er][ec];
+
+      if (
+        !enemyPiece ||
+        enemyPiece.player !== enemy
+      ) {
+        continue;
+      }
+
+      // この敵は取れない
+      if (enemyPiece.top >= pieceTop)
+        continue;
+
+      for (const [dr, dc] of dirs) {
+
+        for (
+          let dist = 1;
+          dist <= enemyPiece.top;
+          dist++
+        ) {
+
+          const nr = er + dr * dist;
+          const nc = ec + dc * dist;
+
+          if (
+            nr < 0 || nr >= 8 ||
+            nc < 0 || nc >= 8
+          ) {
+            break;
+          }
+
+          if (
+            nr === r &&
+            nc === c
+          ) {
+            return true;
+          }
+
+          if (board[nr][nc]) {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
+/*
+function evaluateFormation(board, player) {
+  let left = 0;
+  let right = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+
+      if (!piece || piece.player !== player)
+        continue;
+
+      if (c < 4)
+        left++;
+      else
+        right++;
+    }
+  }
+
+  return -Math.abs(left - right) * 15;
+}
+
+function evaluateKingSafety(board, player) {
+  let kingR = -1;
+  let kingC = -1;
+
+  // キング探索
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+
+      if (
+        p &&
+        p.player === player &&
+        p.isKing
+      ) {
+        kingR = r;
+        kingC = c;
+      }
+    }
+  }
+
+  if (kingR === -1) return -10000;
+
+  let score = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+
+      if (!p || p.player === player)
+        continue;
+
+      const dist =
+        Math.abs(r - kingR) +
+        Math.abs(c - kingC);
+
+      score += dist;
+    }
+  }
+
+  return score * 0.2;
+}
+
+function evaluateDensity(board, player) {
+  let score = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+
+      const piece = board[r][c];
+
+      if (!piece || piece.player !== player)
+        continue;
+
+      let nearby = 0;
+
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+
+          if (dr === 0 && dc === 0)
+            continue;
+
+          const nr = r + dr;
+          const nc = c + dc;
+
+          if (
+            nr < 0 || nr >= 8 ||
+            nc < 0 || nc >= 8
+          )
+            continue;
+
+          const p = board[nr][nc];
+
+          if (
+            p &&
+            p.player === player
+          ) {
+            nearby++;
+          }
+        }
+      }
+
+      score += nearby;
+    }
+  }
+
+  return score;
+}
+
+*/
+
+function evaluateForks(board, player) {
+  let score = 0;
+
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+
+      const piece = board[r][c];
+
+      if (!piece || piece.player !== player)
+        continue;
+
+      let forkTargets = 0;
+
+      for (const [dr, dc] of dirs) {
+
+        for (let dist = 1; dist <= piece.top; dist++) {
+
+          const nr = r + dr * dist;
+          const nc = c + dc * dist;
+
+          if (
+            nr < 0 || nr >= 8 ||
+            nc < 0 || nc >= 8
+          ) {
+            break;
+          }
+
+          const target = board[nr][nc];
+
+          if (!target)
+            continue;
+
+          if (
+            target.player !== player &&
+            piece.top < target.top
+          ) {
+            forkTargets++;
+          }
+
+          break;
+        }
+      }
+
+      if (forkTargets >= 2) {
+        score += 100;
       }
     }
   }
@@ -1554,6 +1977,31 @@ function getBlockingPosition(sr, sc, dr, dc, board) {
     c += dc;
   }
   return [-1, -1];
+}
+
+function applyMovePure(board, move) {
+  const newBoard = cloneBoard(board);
+
+  const fr = move.from[0];
+  const fc = move.from[1];
+  const tr = move.to[0];
+  const tc = move.to[1];
+
+  const piece = newBoard[fr][fc];
+
+  const dx = tc - fc;
+  const dy = tr - fr;
+
+  // ★ここが本体
+  const newDie = moveDie(piece, dx, dy);
+
+  newBoard[fr][fc] = null;
+  newBoard[tr][tc] = {
+    ...piece,
+    ...newDie // ← top含め全部更新
+  };
+
+  return newBoard;
 }
 
 
@@ -1602,38 +2050,277 @@ function generateMoves(player, boardState) {
   return moves;
 }
 
+const TT = new Map();
 
+let moveStack = [];
 
-function negamax(boardState, depth, alpha, beta, player) {
-  // 1. 最深部まで読んだら、そのプレイヤー（player）から見た盤面の点数を返す
-  if (depth === 0 || checkWinner(boardState)) {
-    return evaluateBoard(boardState, player); 
-    // ※ この評価関数は「引数のplayerが有利ならプラス」を返すように作ります
+function makeMove(board, move) {
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+
+  const piece = board[fr][fc];
+
+  const captured = board[tr][tc]; // 追加
+
+  const dx = tc - fc;
+  const dy = tr - fr;
+
+  const oldKey = `${piece.player}${piece.top}`;
+
+  // Zobrist remove from
+  currentHash ^= ZOBRIST[fr][fc][oldKey];
+
+  const newDie = moveDie(piece, dx, dy);
+  const newPiece = { ...piece, ...newDie };
+  const newKey = `${newPiece.player}${newPiece.top}`;
+
+  board[tr][tc] = newPiece;
+  board[fr][fc] = null;
+
+  // Zobrist add to
+  currentHash ^= ZOBRIST[tr][tc][newKey];
+
+  // ★★★ここ重要★★★
+  moveStack.push({
+    from: [fr, fc],
+    to: [tr, tc],
+    movedPiece: piece,
+    captured
+  });
+
+  return board;
+}
+
+function undoMove(board) {
+  const last = moveStack.pop();
+  if (!last) return;
+
+  const [fr, fc] = last.from;
+  const [tr, tc] = last.to;
+
+  const moved = last.movedPiece;
+  const movedKey = `${moved.player}${moved.top}`;
+
+  // remove destination
+  currentHash ^= ZOBRIST[tr][tc][movedKey];
+
+  board[fr][fc] = moved;
+
+  if (last.captured) {
+    board[tr][tc] = last.captured;
+    const capKey = `${last.captured.player}${last.captured.top}`;
+    currentHash ^= ZOBRIST[tr][tc][capKey];
+  } else {
+    board[tr][tc] = null;
   }
 
-  let maxScore = -Infinity;
-  const moves = generateMoves(player, boardState);
+  // add back origin
+  currentHash ^= ZOBRIST[fr][fc][movedKey];
+}
 
-  for (let move of moves) {
-    const nextState = applyMove(cloneBoard(boardState), move);
-    
-    // ★ ここがネガマックスの真骨頂！
-    // 次の手番のプレイヤー（opponent）の視点で探索させ、返ってきたスコアに「マイナス」をつける
-    let score = -negamax(nextState, depth - 1, -beta, -alpha, opponent(player));
-    
-    if (score > maxScore) {
-      maxScore = score;
+const ZOBRIST = [];
+const PLAYERS = ["white", "black"];
+
+function initZobrist() {
+  for (let r = 0; r < 8; r++) {
+    ZOBRIST[r] = [];
+    for (let c = 0; c < 8; c++) {
+      ZOBRIST[r][c] = {};
+      for (const p of PLAYERS) {
+        ZOBRIST[r][c][p] = {};
+        for (let top = 1; top <= 6; top++) {
+          ZOBRIST[r][c][p][top] = random32();
+        }
+      }
     }
-    
-    // アルファベータ法の剪定（せんてい）を行う場合
-    alpha = Math.max(alpha, score);
-    if (alpha >= beta) break;
   }
-
-  return maxScore;
 }
 
 
+function random32() {
+  return (Math.random() * 0xFFFFFFFF) >>> 0;
+}
+
+
+let currentHash = 0;
+
+function computeHash(board) {
+  let h = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (!p) continue;
+
+      h ^= ZOBRIST[r][c][p.player][p.top];
+    }
+  }
+
+  return h;
+}
+
+function scoreMove(move, board) {
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+
+  const target = board[tr][tc];
+
+  if (target?.isKing) return 1000000;
+  if (target) return 10000;
+
+  return 0;
+}
+
+function drawUI(botMove, humanMove) {
+  const layer = document.getElementById("arrow-layer-ui");
+
+  clearUIArrow();
+
+  if (botMove) {
+    drawArrow(layer, botMove.from, botMove.to, "lime");
+  }
+
+  if (humanMove) {
+    drawArrow(layer, humanMove.from, humanMove.to, "orange");
+  }
+}
+
+
+function orderMoves(moves, board, player) {
+  moves.sort((a, b) =>
+    scoreMove(b, board, player) - scoreMove(a, board, player)
+  );
+}
+  
+     function opponent(color) {
+  return color === "black" ? "white" : "black";
+}
+
+function getWinner(board) {
+  let whiteKing = false;
+  let blackKing = false;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+
+      if (!p) continue;
+
+      if (p.isKing) {
+        if (p.player === "white") whiteKing = true;
+        else blackKing = true;
+      }
+    }
+  }
+
+  if (!whiteKing) return "black";
+  if (!blackKing) return "white";
+
+  return null;
+}
+
+function minimax(board, depth, alpha, beta, maximizing, botColor) {
+
+
+const winner = getWinner(board);
+
+
+  if (winner === botColor) {
+    return {
+      score: 100000000000000000,
+      line: []
+    };
+  }
+
+  if (winner === opponent(botColor)) {
+    return {
+      score: -100000000000000000,
+      line: []
+    };
+  }
+
+  const moves = generateMoves(maximizing ? botColor : opponent(botColor), board);
+
+  if (depth === 0 || moves.length === 0) {
+    return {
+      score: evaluateBoard(board, botColor),
+      line: []
+    };
+  }
+
+  orderMoves(moves, board, botColor);
+
+  let bestLine = [];
+
+  if (maximizing) {
+    let maxEval = -Infinity;
+
+    for (const move of moves) {
+
+     const newBoard = applyMovePure(board, move);
+
+
+      const result = minimax(
+        newBoard,
+        depth - 1,
+        alpha,
+        beta,
+        false,
+        botColor
+      );
+
+      if (result.score > maxEval) {
+        maxEval = result.score;
+        bestLine = [move, ...result.line];
+      }
+
+      alpha = Math.max(alpha, result.score);
+      if (beta <= alpha) break;
+    }
+
+    return {
+      score: maxEval,
+      line: bestLine
+    };
+  }
+
+  else {
+    let minEval = Infinity;
+
+    for (const move of moves) {
+
+      const newBoard = applyMovePure(board, move);
+
+      const result = minimax(
+        newBoard,
+        depth - 1,
+        alpha,
+        beta,
+        true,
+        botColor
+      );
+
+      if (result.score < minEval) {
+        minEval = result.score;
+        bestLine = [move, ...result.line];
+      }
+
+      beta = Math.min(beta, result.score);
+      if (beta <= alpha) break;
+    }
+
+    return {
+      score: minEval,
+      line: bestLine
+    };
+  }
+}
+
+function isCapture(move, board) {
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  return board[tr][tc] != null;
+}
 
 function applyMove(boardState, move) {
   const [fr, fc] = move.from;
@@ -1644,8 +2331,10 @@ function applyMove(boardState, move) {
   const newDie = moveDie(piece, dx, dy);
   boardState[tr][tc] = { ...piece, ...newDie };
   boardState[fr][fc] = null;
-  return boardState;
-}
+  return boardState
+  }
+  
+
 
 function checkWinner(boardState) {
   let hasWhiteKing = false;
@@ -1663,10 +2352,9 @@ function checkWinner(boardState) {
   return null;
 }
 
-function isInCheck(color) {
-  return isInCheckAfterMove(color, state);
+function isInCheck(color,board) {
+  return isInCheckAfterMove(color, board);
 }
-
 
 function isInCheckAfterMove(color, board) {
   let kingPosition = null;
@@ -1696,21 +2384,362 @@ function isInCheckAfterMove(color, board) {
   return false;
 }
 
-function checkmate(color) {
-  if (!isInCheck(color)) return false; // まずチェックでなければ詰みでない
+function checkmate(color,board=state) {
+  if (!isInCheck(color,board)) return false; // まずチェックでなければ詰みでない
 
-  const moves = generateMoves(color, state);
+  const moves = generateMoves(color, board);
   for (const move of moves) {
-    const newBoard = applyMove(cloneBoard(state), move);
+  
+    const newBoard = JSON.parse(JSON.stringify(board));
+applyMove(newBoard, move);
     if (!isInCheckAfterMove(color, newBoard)) {
       return false; // 逃げ道があるなら詰みではない
     }
   }
   return true; // 全ての合法手を試してもチェック回避できなければ詰み
+
+  selected = null;
+ }
+ 
+ function getCellCenter(row, col) {
+  const cell = board.rows[row].cells[col];
+  const rect = cell.getBoundingClientRect();
+  const boardRect = board.getBoundingClientRect();
+
+  return {
+    x: rect.left - boardRect.left + rect.width / 2,
+    y: rect.top - boardRect.top + rect.height / 2
+  };
+}
+
+function setArrowColor(color) {
+  const shape = document.getElementById("arrowhead-shape");
+  if (shape) shape.setAttribute("fill", color);
+}
+
+function getMarker(color) {
+  return "url(#arrowhead)";
+}
+
+function getArrowColor(from) {
+  const piece = state[from[0]][from[1]]; // or board
+
+  if (!piece) return "gray";
+
+  return piece.player === "white"
+    ? "red"
+    : "blue";
+}
+
+function drawArrow(layer, from, to, width = 6, opacity = 0.5) {
+  const a = getCellCenter(from[0], from[1]);
+  const b = getCellCenter(to[0], to[1]);
+
+  const color = getArrowColor(from);
+
+  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+
+  line.setAttribute("x1", a.x);
+  line.setAttribute("y1", a.y);
+  line.setAttribute("x2", b.x);
+  line.setAttribute("y2", b.y);
+
+  line.setAttribute("stroke", color);
+  line.setAttribute("stroke-width","20");
+  line.setAttribute("stroke-opacity", "0.5");
+　line.setAttribute("opacity", "0.5");
+  line.setAttribute("marker-end",
+       getMarker(color));
+  layer.appendChild(line);
+}
+
+ let lastDrawTime = 0;
+let currentDepthId = 0;
+
+function updateThinkingUI(depth, move,depthId) {
+if (depthId !== currentDepthId) return; // ★古い描画を捨てる
+
+  clearUIArrow();
+clearPVArrow();
+  const now = performance.now();
+
+  if (now - lastDrawTime < 150) return;
+  lastDrawTime = now;
+
+  if (!move?.from || !move?.to) return;
+
+  updateRobotMessage(
+    `depth ${depth}: (${move.from[0]},${move.from[1]}) → (${move.to[0]},${move.to[1]})`
+  );
+  
+}
+
+function clearUIArrow() {
+  const layer = document.getElementById("arrow-layer-ui");
+  while (layer.firstChild) {
+    layer.removeChild(layer.firstChild);
+  }
+}
+function clearPVArrow() {
+  const layer = document.getElementById("arrow-layer-pv");
+   while (layer.firstChild) {
+    layer.removeChild(layer.firstChild);
+  }
+
+  
+}
+
+function drawPV(line, botColor = "black") {
+  const layer = document.getElementById("arrow-layer-pv");  
+
+  clearPVArrow(); // ★必ず毎回消す  
+  clearUIArrow();
+
+  let turn = botColor;
+
+  for (let i = 0; i < line.length; i++) {
+    const move = line[i];
+
+    drawArrow(
+      layer,
+      move.from,
+      move.to,
+      3,
+      1,
+      i
+    );
+
+    turn = opponent(turn);
+  }
+}
+
+function getMarker(color) {
+  const id = `arrowhead-${color}`;
+  const defs = document.querySelector("defs");
+
+  let old = document.getElementById(id);
+  if (old) old.remove();
+
+  const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+
+  marker.id = id;
+
+  marker.setAttribute("markerUnits", "userSpaceOnUse");
+marker.setAttribute("orient", "auto-start-reverse");
+marker.setAttribute("markerWidth", 28);
+marker.setAttribute("markerHeight", 28);
+
+// ★ここが重要（右端じゃなくてちょい内側）
+marker.setAttribute("refX", 10);
+marker.setAttribute("refY", 14);
+
+
+
+const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+
+poly.setAttribute("points", "0 0, 28 14, 0 28");
+
+  poly.setAttribute("fill", color);
+
+  marker.appendChild(poly);
+  defs.appendChild(marker);
+
+  return `url(#${id})`;
+}
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 
+let displayedMove = null;
+
+ async function findBestMove(board, maxDepth = 10) {
+ 
+ let timedOut = false;
+
+console.log("SEARCH START", Date.now());
+
+  let bestMove = null;
+  let bestScore = -Infinity;
+
+  const moves = generateMoves(botPlayer, board);
+  orderMoves(moves, board, botPlayer);
+
+  const startTime = performance.now();
+  const TIME_LIMIT = 1000;
+
+  for (let depth = 3; depth <= maxDepth; depth++) {
+
+    currentDepthId++;
+
+    clearUIArrow();
+    clearPVArrow();
+    clearArrow();
+
+    await new Promise(r => setTimeout(r, 0));
+
+    let currentBestMove = null;
+    let currentBestScore = -Infinity;
+    let bestLine = [];
+
+    for (const move of moves) {
+
+      const testState = applyMovePure(board, move);
+
+      const result = minimax(
+        testState,
+        depth - 1,
+        -Infinity,
+        Infinity,
+        false,
+        botPlayer
+      );
+
+      const score = result.score;
+
+      // 最善手更新時だけPVも更新
+      if (score > currentBestScore) {
+
+        currentBestScore = score;
+
+        currentBestMove = structuredClone(move);
+
+        // PVの先頭にルート手を付ける
+        bestLine = [structuredClone(move), ...result.line];
+      }
+
+      if (performance.now() - startTime > TIME_LIMIT) {
+   timedOut = true;
+   break;
+}
+    }
+
+   if (bestLine.length > 0) {
+    displayedMove = structuredClone(bestLine[0]);
+    drawPV([displayedMove]);    
+}
+
+    // PV先頭を正式採用
+    if (bestLine.length > 0) {
+    bestMove = structuredClone(bestLine[0]);
+    bestScore = currentBestScore;
+}
+
+console.log("PV", JSON.stringify(bestLine[0]));
+console.log("BEST", JSON.stringify(bestMove));
+
+    await sleep(50);
+
+    updateThinkingUI(depth, bestMove, currentDepthId);
+    
+    if (timedOut) {
+   break;
+}
+
+    await new Promise(r => setTimeout(r, 0));
+  }
+  
+return structuredClone(displayedMove ?? bestMove);
+}
+ 
+ function clearArrow() {
+  const layer = document.getElementById("arrow-layer");
+
+  if (!layer) return;
+
+  // ★lineだけ消す（defsは残す）
+  layer.querySelectorAll("line").forEach(el => el.remove());
+}
+
+ async function botTurn() {
+ console.log("BOTTURN START", Date.now());
+  updateRobotMessage("考え中...");
+
+  await new Promise(r => setTimeout(r, 100));
+
+  let bestMove = await findBestMove(state, 3); // 深さ上限
+  
+  console.log("PLAY", JSON.stringify(bestMove));
+
+  if (!bestMove) {
+  console.log("fallback random move");
+  const moves = generateMoves(botPlayer, state);
+  bestMove = moves[Math.floor(Math.random() * moves.length)];
+}
+
+
+  
+
+  if (bestMove) {
+    const [fr, fc] = bestMove.from;
+    const [tr, tc] = bestMove.to;
+    const piece = state[fr][fc];
+    const dx = tc - fc;
+    const dy = tr - fr;
+    const newDie = moveDie(piece, dx, dy);
+
+    const diceElement = board.rows[fr].cells[fc].querySelector(".dice");
+
+    //animation
+    render(); // まず描画
+    await new Promise(requestAnimationFrame); // 1フレーム待つことでDOMが確実に反映される
+    const directions = [];
+    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+    await animateMoveAndUpdateState(fr, fc, directions, piece);
+
+    // アニメーション後に移動を反映
+    state[tr][tc] = { ...piece, ...newDie };
+    state[fr][fc] = null;
+    // 棋譜記録
+    recordMove(currentPlayer, [fr, fc], [tr, tc], piece, newDie);
+    render();
+    clearUIArrow();
+  clearPVArrow();
+  const snapshot = structuredClone(state);
+positionHistory.push(boardKey(snapshot));
+
+   if (currentPlayer === 'black' && state[tr][tc]?.isKing && state[tr][tc]?.player === 'white') {
+  showModal("Black wins!");
+  endGame();
+  return;
+}
+  if (checkmate("white")) {
+    setTimeout(() => {
+      showModal("blackwins!");
+      endGame();
+    }, 2000);
+    
+    return;
+  }
+  if (currentPlayer === 'white' && state[tr][tc]?.isKing && state[tr][tc]?.player === 'black') {
+  showModal("white wins!");
+  endGame();
+  return;
+}
+  if (checkmate("black")) {
+    setTimeout(() => {
+      showModal("whitewins!");
+      endGame();
+    }, 2000);
+    
+    return;
+  }
+}
+
+  currentPlayer = humanPlayer;
+  updateRobotMessage(humanPlayer+"のターン");
+  //status.textContent = "Whiteのターン";
+  selected = null;
+  clearUIArrow();
+  clearPVArrow();
+
+}
+
 setup();
+initZobrist();
+//currentHash = compueHash(state);
+
 </script>
 </body>
 </html>
