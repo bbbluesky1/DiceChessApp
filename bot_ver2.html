@@ -1612,19 +1612,11 @@ if (piece.isKing) {
     perspective === "white" ? "black" : "white"
   );
   
-  const count =
-  repetitionCount(board);
-
-if (count >= 2){
-score -= count*5000
-  }; 
-  
   
  if (checkmate(perspective === "white" ? "black" : "white",board)) score +=10000;
  
  return score
  };
- 
  
  function evaluateSafeCaptures(board, player) {
   let score = 0;
@@ -1708,7 +1700,7 @@ function evaluatePieceCount(board, player) {
     }
   }
 
-  return (myCount - enemyCount) * 10;
+  return (myCount - enemyCount) * 2000;
 }
 
 function canEnemyCaptureSquare(
@@ -2040,9 +2032,13 @@ function generateMoves(player, boardState) {
             }
             break;
           }
-
-          // 空きマス
+          
+         
+   // 空きマス
           moves.push({ from: [r, c], to: [nr, nc] });
+ 
+  
+        
         }
       }
     }
@@ -2221,6 +2217,9 @@ function getWinner(board) {
 
 function minimax(board, depth, alpha, beta, maximizing, botColor) {
 
+if (repetitionCount(board) >= 2){
+return -1;
+};
 
 const winner = getWinner(board);
 
