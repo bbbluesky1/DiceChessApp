@@ -1526,7 +1526,7 @@ function evaluateBoard(board, perspective) {
   let score = 0;
   
   if (kingInDanger(board, perspective))
-  score -= 5000000000;
+  score -= 5000;
 
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
 
@@ -1535,12 +1535,12 @@ function evaluateBoard(board, perspective) {
       const piece = board[r][c];
       if (!piece) continue;
 
-      let value = 100 + piece.top * 10;
+      let value = 100;
 if (piece.isKing) {
-    value += 10000000000000000;
+    value += 10000;
 
     if (piece.top === 1)
-        value += 30000000000000000000000000;
+        value += 3000;
 }
       let mobility = 0;
       let attackBonus = 0;
@@ -1616,11 +1616,11 @@ if (piece.isKing) {
   repetitionCount(board);
 
 if (count >= 2){
-score -= count*1000000
+score -= count*5000
   }; 
   
   
- if (checkmate(perspective === "white" ? "black" : "white",board)) score +=10000000000000000000000000;
+ if (checkmate(perspective === "white" ? "black" : "white",board)) score +=10000;
  
  return score
  };
@@ -1677,7 +1677,7 @@ score -= count*1000000
                 player
               )
             ) {
-              score += 1200;
+              score += 120;
             }
           }
 
@@ -1708,7 +1708,7 @@ function evaluatePieceCount(board, player) {
     }
   }
 
-  return (myCount - enemyCount) * 1000;
+  return (myCount - enemyCount) * 10;
 }
 
 function canEnemyCaptureSquare(
@@ -1946,7 +1946,7 @@ function evaluateForks(board, player) {
       }
 
       if (forkTargets >= 2) {
-        score += 1000;
+        score += 100;
       }
     }
   }
@@ -2550,7 +2550,15 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+
+let displayedMove = null;
+
  async function findBestMove(board, maxDepth = 10) {
+ 
+ let timedOut = false;
+
+console.log("SEARCH START", Date.now());
+
   let bestMove = null;
   let bestScore = -Infinity;
 
@@ -2560,68 +2568,78 @@ function sleep(ms) {
   const startTime = performance.now();
   const TIME_LIMIT = 1000;
 
-for (let depth = 3; depth <= maxDepth; depth++) {
+  for (let depth = 3; depth <= maxDepth; depth++) {
 
-  currentDepthId++;
+    currentDepthId++;
 
-  const myDepth = currentDepthId;
+    clearUIArrow();
+    clearPVArrow();
+    clearArrow();
 
-  clearUIArrow();
-  clearPVArrow();
-  clearArrow();
+    await new Promise(r => setTimeout(r, 0));
 
-  await new Promise(r => setTimeout(r, 0));
+    let currentBestMove = null;
+    let currentBestScore = -Infinity;
+    let bestLine = [];
 
-  let currentBestMove = null;
-  let currentBestScore = -Infinity;
+    for (const move of moves) {
 
-  let bestLine = null; // ★追加
+      const testState = applyMovePure(board, move);
 
-  for (const move of moves) {
+      const result = minimax(
+        testState,
+        depth - 1,
+        -Infinity,
+        Infinity,
+        false,
+        botPlayer
+      );
 
-    const testState = applyMovePure(board, move);
-    const result = minimax(
-      testState,
-      depth - 1,
-      -Infinity,
-      Infinity,
-      botPlayer === "black" ? false : true,
-      botPlayer
-    );
+      const score = result.score;
 
-    // ★PVは「最善のやつだけ保持」
-    if (!bestLine || result.score > currentBestScore) {
-      bestLine = [...result.line];
+      // 最善手更新時だけPVも更新
+      if (score > currentBestScore) {
+
+        currentBestScore = score;
+
+        currentBestMove = structuredClone(move);
+
+        // PVの先頭にルート手を付ける
+        bestLine = [structuredClone(move), ...result.line];
+      }
+
+      if (performance.now() - startTime > TIME_LIMIT) {
+   timedOut = true;
+   break;
+}
     }
 
-    const score = result.score;
-
-    if (score > currentBestScore) {
-      currentBestScore = score;
-      currentBestMove = move;
-    }
-
-    if (performance.now() - startTime > TIME_LIMIT) {
-      return bestMove;
-    }
-  }
-
-//console.log(bestLine.length);
-  // ★PV描画はここで1回だけ
-  if (bestLine && bestLine.length > 0) {
-    drawPV(bestLine.slice(-2));
-   
-  }            
-
-  bestMove = currentBestMove;
-  bestScore = currentBestScore;
-await sleep(50); // ★これが“チラつき”    
-  updateThinkingUI(depth, bestMove, currentDepthId);
-
-  await new Promise(r => setTimeout(r, 0));
+   if (bestLine.length > 0) {
+    displayedMove = structuredClone(bestLine[0]);
+    drawPV([displayedMove]);    
 }
 
-  return bestMove;
+    // PV先頭を正式採用
+    if (bestLine.length > 0) {
+    bestMove = structuredClone(bestLine[0]);
+    bestScore = currentBestScore;
+}
+
+console.log("PV", JSON.stringify(bestLine[0]));
+console.log("BEST", JSON.stringify(bestMove));
+
+    await sleep(50);
+
+    updateThinkingUI(depth, bestMove, currentDepthId);
+    
+    if (timedOut) {
+   break;
+}
+
+    await new Promise(r => setTimeout(r, 0));
+  }
+  
+return structuredClone(displayedMove ?? bestMove);
 }
  
  function clearArrow() {
@@ -2634,11 +2652,14 @@ await sleep(50); // ★これが“チラつき”
 }
 
  async function botTurn() {
+ console.log("BOTTURN START", Date.now());
   updateRobotMessage("考え中...");
 
   await new Promise(r => setTimeout(r, 100));
 
-  let bestMove = await findBestMove(state, 6); // 深さ上限
+  let bestMove = await findBestMove(state, 3); // 深さ上限
+  
+  console.log("PLAY", JSON.stringify(bestMove));
 
   if (!bestMove) {
   console.log("fallback random move");
