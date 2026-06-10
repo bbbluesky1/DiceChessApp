@@ -758,6 +758,8 @@ function getMoveEvaluationMark(before, after) {
     const { mark, color } = getMoveEvaluationMark(beforeScore, afterScore);
     document.getElementById("evaluation").innerText = `評価値差: ${diff} ${mark}`;
 
+    // ★ 盤面上への評価マーク(バブルなど)の追加処理を非表示にしました
+    /*
     const [r, c] = move.to;
     const cell = board.rows[r].cells[c];
     if (cell) {
@@ -767,6 +769,7 @@ function getMoveEvaluationMark(before, after) {
       markSpan.style.backgroundColor = color;
       cell.appendChild(markSpan);
     }
+    */
   } else {
     document.getElementById("evaluation").innerText = "";
   }
@@ -1678,7 +1681,6 @@ function cornerDistance(r, c) {
  [0,0, 0, 0, 0 ,0, 0, 0],
 
   ]
-
 };
 
 
@@ -2335,8 +2337,8 @@ const winner = getWinner(board);
       const result = minimax(
         newBoard,
         depth - 1,
-        alpha,
-        beta,
+        -Infinity,
+        Infinity,
         false,
         botColor
       );
@@ -2366,8 +2368,8 @@ const winner = getWinner(board);
       const result = minimax(
         newBoard,
         depth - 1,
-        alpha,
-        beta,
+        -Infinity,
+        Infinity,
         true,
         botColor
       );
