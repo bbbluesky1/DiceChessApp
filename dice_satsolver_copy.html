@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dice 24 State SAT Solver</title>
+<style>
+canvas{
+  border:1px solid black;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="cv" width="500" height="500"></canvas>
+<pre id="out"></pre>
+
+<script type="module">
+import LogicSolver from "https://cdn.jsdelivr.net/npm/logic-solver@2.0.1/+esm";
+
+const Solver = LogicSolver.Solver;
+
+// ----------------------
+// 盤面
+// ----------------------
+
+const W = 5;
+const H = 5;
+
+const walls = [
+  [1, 1],
+  [2, 1],
+  [3, 3]
+];
+
+const goalX = 4;
+const goalY = 4;
+const goalFace = 1; // 目的の上面
+
+function isWall(x, y){
+  return walls.some(a => a[0] === x && a[1] === y);
+}
+
+const cells = [];
+for(let x = 0; x < W; x++){
+  for(let y = 0; y < H; y++){
+    if(!isWall(x, y)) cells.push([x, y]);
+  }
+}
+
+// ----------------------
+// サイコロ24状態
+// ----------------------
+
+const faces = ["U", "D", "N", "S", "E", "W"];
+
+const startDice = {
+  U: 1,
+  D: 6,
+  N: 2,
+  S: 5,
+  E: 3,
+  W: 4
+};
+
+function key(d){
+  return faces.map(f => d[f]).join(",");
+}
+
+function rotate(d, r){
+  let n = {};
+  for(let f of faces){
+    n[f] = d[Object.keys(r).find(k => r[k] == f)];
+  }
+  return n;
+}
+
+const rot = {
+  right: {
+    U: "E",
+    E: "D",
+    D: "W",
+    W: "U",
+    N: "N",
+    S: "S"
+  },
+  left: {
+    U: "W",
+    W: "D",
+    D: "E",
+    E: "U",
+    N: "N",
+    S: "S"
+  },
+  down: {
+    U: "S",
+    S: "D",
+    D: "N",
+    N: "U",
+    E: "E",
+    W: "W"
+  },
+  up: {
+    U: "N",
+    N: "D",
+    D: "S",
+    S: "U",
+    E: "E",
+    W: "W"
+  }
+};
+
+let states = [];
+let seen = new Set();
+let q = [startDice];
+
+while(q.length){
+  let d = q.shift();
+  let k = key(d);
+
+  if(seen.has(k)) continue;
+
+  seen.add(k);
+  states.push(d);
+
+  for(let r in rot){
+    q.push(rotate(d, rot[r]));
+  }
+}
+
+console.log("states", states.length);
+
+// 1歩ごとの状態遷移
+let next1 = {};
+for(let i = 0; i < states.length; i++){
+  next1[i] = {};
+  for(let r in rot){
+    let nd = rotate(states[i], rot[r]);
+    let id = states.findIndex(s => key(s) === key(nd));
+    next1[i][r] = id;
+  }
+}
+
+function advanceState(s, dir, dist){
+  let cur = s;
+  for(let i = 0; i < dist; i++){
+    cur = next1[cur][dir];
+  }
+  return cur;
+}
+
+// ----------------------
+// SAT変数
+// ----------------------
+
+function V(t, x, y, s){
+  return `S_${t}_${x}_${y}_${s}`;
+}
+
+function A(t, dir, dist){
+  return `A_${t}_${dir}_${dist}`;
+}
+
+const moves = ["right", "left", "up", "down"];
+const MAX_STEP = 6;
+const MAX_T = 20;
+
+function stepOf(m){
+  if(m === "right") return { dx: 1, dy: 0 };
+  if(m === "left")  return { dx: -1, dy: 0 };
+  if(m === "down")  return { dx: 0, dy: 1 };
+  return { dx: 0, dy: -1 };
+}
+
+function exactlyOne(solver, arr){
+  solver.require(LogicSolver.or(arr));
+  for(let i = 0; i < arr.length; i++){
+    for(let j = i + 1; j < arr.length; j++){
+      solver.require(
+        LogicSolver.not(
+          LogicSolver.and(arr[i], arr[j])
+        )
+      );
+    }
+  }
+}
+
+function buildSolver(T){
+  const solver = new Solver();
+
+  function allVarsAtTime(t){
+    const arr = [];
+    for(const [x, y] of cells){
+      for(let s = 0; s < states.length; s++){
+        arr.push(V(t, x, y, s));
+      }
+    }
+    return arr;
+  }
+
+  // 各時刻で位置＋状態は1つだけ
+  for(let t = 0; t <= T; t++){
+    exactlyOne(solver, allVarsAtTime(t));
+  }
+
+  // 各手で、方向＋距離の選択も1つだけ
+  for(let t = 0; t < T; t++){
+    const acts = [];
+    for(const dir of moves){
+      for(let dist = 1; dist <= MAX_STEP; dist++){
+        acts.push(A(t, dir, dist));
+      }
+    }
+    exactlyOne(solver, acts);
+  }
+
+  // 初期状態
+  solver.require(V(0, 0, 0, 0));
+
+  // 遷移
+  for(let t = 0; t < T; t++){
+    for(let x = 0; x < W; x++){
+      for(let y = 0; y < H; y++){
+        if(isWall(x, y)) continue;
+
+        for(let s = 0; s < states.length; s++){
+          for(const dir of moves){
+            const { dx, dy } = stepOf(dir);
+
+            for(let dist = 1; dist <= MAX_STEP; dist++){
+              const cur = V(t, x, y, s);
+              const act = A(t, dir, dist);
+
+              // その時の目より長い距離は不可
+              if(dist > states[s].U){
+                solver.require(
+                  LogicSolver.not(
+                    LogicSolver.and(cur, act)
+                  )
+                );
+                continue;
+              }
+
+              // 経路上のマスを全部チェック
+              let ok = true;
+              let nx = x;
+              let ny = y;
+
+              for(let i = 1; i <= dist; i++){
+                nx += dx;
+                ny += dy;
+
+                if(nx < 0 || ny < 0 || nx >= W || ny >= H || isWall(nx, ny)){
+                  ok = false;
+                  break;
+                }
+              }
+
+              if(!ok){
+                solver.require(
+                  LogicSolver.not(
+                    LogicSolver.and(cur, act)
+                  )
+                );
+                continue;
+              }
+
+              const ns = advanceState(s, dir, dist);
+
+              solver.require(
+                LogicSolver.implies(
+                  LogicSolver.and(cur, act),
+                  V(t + 1, nx, ny, ns)
+                )
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // ゴール
+  const goalStates = [];
+  for(let s = 0; s < states.length; s++){
+    if(states[s].U === goalFace){
+      goalStates.push(V(T, goalX, goalY, s));
+    }
+  }
+  solver.require(LogicSolver.or(goalStates));
+
+  return solver;
+}
+
+// ----------------------
+// 最短手数探索
+// ----------------------
+
+let sol = null;
+let T = -1;
+
+for(let testT = 0; testT <= MAX_T; testT++){
+  const solver = buildSolver(testT);
+  const r = solver.solve();
+
+  if(r){
+    sol = r;
+    T = testT;
+    break;
+  }
+}
+
+let path = [];
+
+if(sol){
+  for(let t = 0; t < T; t++){
+    for(const dir of moves){
+      for(let dist = 1; dist <= MAX_STEP; dist++){
+        if(sol.evaluate(A(t, dir, dist))){
+          path.push(`${dir}:${dist}`);
+        }
+      }
+    }
+  }
+
+  document.getElementById("out").textContent =
+    `最短手数: ${T}\n解:\n` + path.join(" → ");
+}else{
+  document.getElementById("out").textContent =
+    `解なし（MAX_T=${MAX_T} まで探索）`;
+}
+
+// ----------------------
+// Canvas
+// ----------------------
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+
+const emoji = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+function getPos(t){
+  if(!sol) return null;
+
+  for(const [x, y] of cells){
+    for(let s = 0; s < states.length; s++){
+      if(sol.evaluate(V(t, x, y, s))){
+        return { x, y, s };
+      }
+    }
+  }
+  return null;
+}
+
+function draw(t){
+  ctx.clearRect(0, 0, 500, 500);
+  ctx.font = "40px sans-serif";
+
+  for(let x = 0; x < W; x++){
+    for(let y = 0; y < H; y++){
+      ctx.strokeRect(x * 100, y * 100, 100, 100);
+
+      if(isWall(x, y)){
+        ctx.fillText("■", x * 100 + 35, y * 100 + 60);
+      }
+    }
+  }
+
+  ctx.fillText("★", goalX * 100 + 35, goalY * 100 + 60);
+
+  const p = getPos(t);
+  if(p){
+    ctx.fillText(
+      emoji[states[p.s].U],
+      p.x * 100 + 30,
+      p.y * 100 + 65
+    );
+  }
+}
+
+let i = 0;
+draw(0);
+
+setInterval(() => {
+  if(!sol) return;
+  i++;
+  if(i > T) return;
+  draw(i);
+}, 800);
+</script>
+
+</body>
+</html>
