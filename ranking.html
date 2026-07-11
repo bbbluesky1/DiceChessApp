@@ -164,15 +164,17 @@ document.getElementById('back-button').addEventListener('click', () => {
 
 
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAFQI1E8pspRrSHECSzh5mQxvIGG2oqyq8",
-      authDomain: "dicechess-f5f50.firebaseapp.com",
-      projectId: "dicechess-f5f50",
-      storageBucket: "dicechess-f5f50.appspot.com",
-      messagingSenderId: "612776353708",
-      appId: "1:612776353708:web:f285fa250fc6a61faae409",
-      measurementId: "G-5H17F0B5R0"
-    };
+     const firebaseConfig = {
+    apiKey: "AIzaSyDPN3x-mLFWOPzCo3X7pw91jNviJK9o9iM",
+    authDomain: "dicechessapp-f1aae.firebaseapp.com",
+    databaseURL: "https://dicechessapp-f1aae-default-rtdb.firebaseio.com",
+    projectId: "dicechessapp-f1aae",
+    storageBucket: "dicechessapp-f1aae.firebasestorage.app",
+    messagingSenderId: "95867369126",
+    appId: "1:95867369126:web:c48908ee53f03027fca667",
+    measurementId: "G-Z4Z2HS0GMX"
+  };
+
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
