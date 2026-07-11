@@ -450,6 +450,11 @@
 #resign-button:hover{
   background:#555;
 }
+#resign-modal .modal-content button{
+  margin: 10px 8px 0;
+  min-width: 90px;
+}
+
   </style>
 </head>
 <body>
@@ -488,6 +493,13 @@
       <button id="resign-button">
 🏳️ resign
 </button>
+<div id="resign-modal" class="modal hidden">
+  <div class="modal-content">
+    <p>投了しますか？</p>
+    <button id="resign-yes">はい</button>
+    <button id="resign-no">いいえ</button>
+  </div>
+</div>
       <div id="player-clock" class="chess-clock">
 10:00
 </div>
@@ -664,26 +676,6 @@ setInterval(async ()=>{
 }
 
 
-document.getElementById("resign-button")
-.onclick = async function(){
-
-  if(gameEnded) return;
-
-  gameEnded = true;
-
-
-  const rateText = await updateBotElo(0);
-
-
-  showModal(
-    "投了しました\nBlack wins!\n" + rateText,
-    true
-  );
-
-
-  endGame();
-
-};
 
 async function updateBotElo(result){
 
@@ -725,6 +717,25 @@ formatTime(blackTime);
 },1000);
 
 
+document.getElementById("resign-button").onclick = function () {
+  document.getElementById("resign-modal").classList.remove("hidden");
+};
+
+document.getElementById("resign-no").onclick = function () {
+  document.getElementById("resign-modal").classList.add("hidden");
+};
+
+document.getElementById("resign-yes").onclick = async function () {
+
+  document.getElementById("resign-modal").classList.add("hidden");
+
+  const rateMessage = await updateBotElo(0);
+
+  showModal(
+    "Black wins!\n" + rateMessage,
+    true
+  );
+};
 
 function showModal(message, finished=false) {
 
