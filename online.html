@@ -384,6 +384,12 @@ main#game-container {
   }
 }
 
+#match-button {
+  margin-top: 100px;
+  padding: 15px 30px;
+  font-size: 20px;
+}
+
 #room-list-container {
   padding: 20px;
   max-width: 800px;
@@ -503,11 +509,20 @@ main#game-container {
       <a href="./tsumeshogi.html">詰将棋</a>
     </nav>
   </header>
+  
+  <button id="match-button">
+オンライン対戦開始
+</button>
+<div id="clock">
+白 10:00　黒 10:00
+</div>
 
-  <div id="room-list-container">
+  <!--  <div id="room-list-container">
   <h2 style="color: white; text-align: center;">参加可能な部屋</h2>
   <div id="room-list" class="room-grid"></div>
 </div>
+-->
+
   <main id="game-container">
 
   <div id="board-container">
@@ -545,12 +560,42 @@ main#game-container {
 </div>
 
 
+
  <!-- Firebase SDK v8系 -->
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
+    setInterval(async()=>{
+
+ const snap =
+ await firebase.database()
+ .ref("rooms/"+roomid)
+ .once("value");
+
+ const room=snap.val();
+
+ if(!room) return;
+
+
+ let white=room.timeWhite;
+ let black=room.timeBlack;
+
+
+ function format(t){
+   let m=Math.floor(t/60);
+   let s=t%60;
+   return `${m}:${s.toString().padStart(2,"0")}`;
+ }
+
+
+ document.getElementById("clock").innerHTML =
+ `白 ${format(white)}　黒 ${format(black)}`;
+
+
+},1000);
+    
 
   function showModal(message) {
     document.getElementById("modal-message").innerText = message;
@@ -565,15 +610,17 @@ main#game-container {
   window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
 });
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyAFQI1E8pspRrSHECSzh5mQxvIGG2oqyq8",
-    authDomain: "dicechess-f5f50.firebaseapp.com",
-    projectId: "dicechess-f5f50",
-    storageBucket: "dicechess-f5f50.firebasestorage.app",
-    messagingSenderId: "612776353708",
-    appId: "1:612776353708:web:f285fa250fc6a61faae409",
-    measurementId: "G-5H17F0B5R0"
+const firebaseConfig = {
+    apiKey: "AIzaSyDPN3x-mLFWOPzCo3X7pw91jNviJK9o9iM",
+    authDomain: "dicechessapp-f1aae.firebaseapp.com",
+    databaseURL: "https://dicechessapp-f1aae-default-rtdb.firebaseio.com",
+    projectId: "dicechessapp-f1aae",
+    storageBucket: "dicechessapp-f1aae.firebasestorage.app",
+    messagingSenderId: "95867369126",
+    appId: "1:95867369126:web:c48908ee53f03027fca667",
+    measurementId: "G-Z4Z2HS0GMX"
   };
+
 
   // Firebase 初期化
   const app = firebase.initializeApp(firebaseConfig);
@@ -638,7 +685,8 @@ function reportVictory() {
 
 function getRate(opponentName){
 
-  const myName = params.get('myname');
+  //const myName = params.get('myname');
+  const myName = "test";
   
   Promise.all([
     db2.collection("users").where("name", "==", myName).get(),
@@ -755,16 +803,140 @@ const resultsRef = firebase.database().ref("rooms/" + roomid);
 }
 
 
+document.getElementById("match-button")
+.addEventListener("click", async()=>{
+
+  const room = await getRandomWaitingRoom();
+
+  if(room){
+
+    console.log("参加する部屋:", room.id);
+
+    await getOpponentName(room.id,myname);
+
+    listenForOpponentMove(myname,room.id);
+
+  }else{
+
+    console.log("空き部屋なし、新規作成");
+
+    const newRoomRef = db.ref("rooms").push();
+
+    
+    await newRoomRef.set({
+  name: myname,
+  opponent:"",
+  status:"waiting",
+  turn:myname,
+  moves:"",
+  winner:"",
+
+  timeWhite:600,
+  timeBlack:600,
+  lastMoveTime: Date.now()
+});
+
+    roomid = newRoomRef.key;
+    
+
+    updateRobotMessage(
+      "対戦相手を探しています..."
+    );
+
+    listenForEntry(myname,roomid);
+
+    startMatchingTimer();
+
+  }
+
+});
+
+let matchTimer = null;
+let isMatched = false;
 
 
+// 待機開始
+function startMatchingTimer(){
+
+  matchTimer = setTimeout(()=>{
+
+    if(!isMatched){
+
+      console.log("マッチング失敗 → Bot戦へ");
+
+      startBotMatch();
+
+    }
+
+  }, 3000); //30秒待つ
+
+}
 
 
+// 相手が来た時
+function matched(){
+
+  isMatched = true;
+
+  if(matchTimer){
+    clearTimeout(matchTimer);
+  }
+
+}
+
+function startBotMatch(){
+
+  // Firebase部屋解除
+  if(roomid){
+
+    firebase.database()
+    .ref("rooms/"+roomid)
+    .update({
+      name:"",
+      opponent:"",
+      status:"waiting",
+      turn:"",
+      moves:"",
+      winner:""
+    });
+
+  }
+
+
+  // オンラインUIをBot用に変更
+
+  document.getElementById("opponentName")
+  .textContent="Diceman Bot";
+
+  document.getElementById("opponentRate")
+  .textContent="1200";
+
+
+  document.getElementById("board-container")
+  .style.display="block";
+
+
+  document.getElementById("robot-area")
+  .style.display="flex";
+
+
+  updateRobotMessage(
+    "対戦相手が見つからなかったのでBot戦を開始します！"
+  );
+
+
+  // ここで既存のbot.jsの処理開始
+  initBotGame();
+
+}
 
 
  var roomid = null;
  var params = new URLSearchParams(window.location.search);
- var myname = params.get('myname');
+ //var myname = params.get('myname');
+ var myname = "test";
  var room = null;
+ let reverseColor = false;
 
 async function getOpponentName(roomId, myName) {
   try {
@@ -797,6 +969,7 @@ async function getOpponentName(roomId, myName) {
       console.log("部屋を作成:", myName);
       updateRobotMessage("対戦相手待ち..."); 
       listenForEntry(myName,roomId)
+      startMatchingTimer(); //追加
     }
 
     // 相手プレイヤーとして参加
@@ -804,10 +977,20 @@ async function getOpponentName(roomId, myName) {
     room = snapshot.val();
 
     if (!room.opponent && room.name !== myName) {
+    
+    
       await roomRef.update({
         opponent: myName,
         status: "playing"
       });
+      
+      matched(); //追加
+      document.getElementById("board-container").style.display = "block";
+document.getElementById("robot-area").style.display = "flex";
+      
+      reverseColor = true;
+      render();   // ←追加
+      
       console.log("相手として参加:", myName);
       listenForLosses()
       let opponentName = (room.name === myName) ? room.opponent : room.name;
@@ -827,45 +1010,49 @@ async function getOpponentName(roomId, myName) {
 
 
 
-  async function getRandomWaitingRoom() {
-      try {
-        // "rooms"ノード以下の全データ取得
-        const snapshot = await db.ref("rooms").once("value");
-        const allRooms = snapshot.val() || {};
+ async function getRandomWaitingRoom() {
 
-        // "status"が"waiting"の部屋だけ抽出
-        const waitingRooms = Object.entries(allRooms).filter(
-          ([, value]) => value.status === "waiting"
-        );
+  try {
 
-        if (waitingRooms.length === 0) {
-          console.log("待機中の部屋はありません");
-          return null;
-        }
+    const snapshot = await db.ref("rooms").once("value");
+    const allRooms = snapshot.val() || {};
 
-        // ランダムに1つ選ぶ
-        const randomIndex = Math.floor(Math.random() * waitingRooms.length);
-        const [roomId, roomData] = waitingRooms[randomIndex];
 
-        console.log("選ばれた部屋:", roomId, roomData);
-        return { id: roomId, ...roomData };
-      } catch (error) {
-        console.error("データ取得エラー:", error);
-        return null;
-      }
+    // 人がいる待機部屋
+    const playerRooms = Object.entries(allRooms)
+      .filter(([, value]) =>
+        value.status === "waiting" &&
+        value.name
+      );
+
+
+    if(playerRooms.length > 0){
+
+      const randomIndex =
+        Math.floor(Math.random()*playerRooms.length);
+
+      const [roomId, roomData] =
+        playerRooms[randomIndex];
+
+      return {
+        id:roomId,
+        ...roomData
+      };
     }
-/*
-  // 使用例
-  getRandomWaitingRoom().then((room) => {
-    if (room) {
-      console.log("参加部屋:", room.id);
-      getOpponentName(room.id,myname);
-      listenForOpponentMove(myname,room.id);
-    } else {
-      console.log("新しく部屋を作成する処理へ");
-    }
-  });
-  */
+
+
+    // 誰もいない部屋しかない場合
+    return null;
+
+
+  } catch(error){
+
+    console.error(error);
+    return null;
+
+  }
+
+}
 
 async function getWaitingRooms() {
   try {
@@ -883,6 +1070,7 @@ async function getWaitingRooms() {
   }
 }
 
+/*
 async function showRoomList(myname) {
   const container = document.getElementById("room-list");
   container.innerHTML = "<p style='color:white; textalign'>読み込み中...</p>";
@@ -923,6 +1111,7 @@ rooms.forEach((room) => {
 
 }
 
+*/
 
 function joinRoom(roomId, myname) {
   const container = document.getElementById("room-list-container");
@@ -938,7 +1127,7 @@ function joinRoom(roomId, myname) {
 }
 
  
-showRoomList(myname);
+//showRoomList(myname);
 
 
 
@@ -965,8 +1154,34 @@ async function sendMove(roomId, move) {
   const snapshot = await roomRef.once("value");
   const room = snapshot.val();
 
-  const nextTurn = (room.turn === room.name) ? room.opponent : room.name;
-  await roomRef.update({ turn: nextTurn });
+  const now = Date.now();
+
+let updateData = {
+  turn: nextTurn,
+  lastMoveTime: now
+};
+
+
+// 今まで手番だった人の時間を減らす
+const elapsed = Math.floor(
+  (now - room.lastMoveTime) / 1000
+);
+
+
+if(room.turn === room.name){
+
+  updateData.timeWhite =
+    room.timeWhite - elapsed;
+
+}else{
+
+  updateData.timeBlack =
+    room.timeBlack - elapsed;
+
+}
+
+
+await roomRef.update(updateData);
   updateRobotMessage(nextTurn + "のターン");
 }
 
@@ -1094,37 +1309,114 @@ function rollDie(die, direction) {
 }
 
 
+function setupBoard(reverse=false){
+
+  const white = reverse ? "black" : "white";
+  const black = reverse ? "white" : "black";
+
+  for(let i=0;i<SIZE;i++){
+
+    state[7][i] = createPiece(
+      backRank[i],
+      "",
+      white,
+      backRank[i] === 2
+    );
+
+    state[6][i] = createPiece(
+      1,
+      "",
+      white
+    );
+
+
+    state[0][i] = createPiece(
+      reversedBackRank[i],
+      "",
+      black,
+      reversedBackRank[i] === 2
+    );
+
+    state[1][i] = createPiece(
+      1,
+      "",
+      black
+    );
+  }
+}
+
 
 function setup() {
+
+state.length = 0;
+board.innerHTML = "";
+
   for (let r = 0; r < SIZE; r++) {
     const row = [];
     const tr = document.createElement("tr");
+
     for (let c = 0; c < SIZE; c++) {
       const td = document.createElement("td");
+
       td.dataset.row = r;
       td.dataset.col = c;
       td.className = (r + c) % 2 === 0 ? "white" : "black";
+
       td.addEventListener("click", onCellClick);
+
       tr.appendChild(td);
       row.push(null);
     }
+
     board.appendChild(tr);
     state.push(row);
   }
 
+
   const backRank = [5, 3, 3, 6, 2, 3, 3, 5];
   const reversedBackRank = [...backRank].reverse();
-  for (let i = 0; i < SIZE; i++) {
-  state[7][i] = createPiece(backRank[i], "", "white", backRank[i] === 2);
-  state[6][i] = createPiece(1, "", "white");
 
-  state[0][i] = createPiece(reversedBackRank[i], "", "black", reversedBackRank[i] === 2);
-  state[1][i] = createPiece(1, "", "black");
-}
+
+  for (let i = 0; i < SIZE; i++) {
+
+    state[7][i] =
+      createPiece(
+        backRank[i],
+        "",
+        "white",
+        backRank[i] === 2
+      );
+
+    state[6][i] =
+      createPiece(
+        1,
+        "",
+        "white"
+      );
+
+
+    state[0][i] =
+      createPiece(
+        reversedBackRank[i],
+        "",
+        "black",
+        reversedBackRank[i] === 2
+      );
+
+    state[1][i] =
+      createPiece(
+        1,
+        "",
+        "black"
+      );
+  }
 
 
   render();
 }
+
+
+
 
 let ghostMoves = [];
 
@@ -1166,29 +1458,59 @@ function getGhostMoves(piece, sr, sc) {
 }
 
 function createDiceElement(piece, isGhost = false) {
-  const wrapper = document.createElement("div"); // ゴースト用ラッパー
+  const wrapper = document.createElement("div");
   const dice = document.createElement("div");
-  dice.id = `piece-${piece.id}`; // ID追加
 
-  const colorClass = piece.isKing
-    ? (piece.player === "white" ? "red-dice" : "blue-dice")
-    : (piece.player === "white" ? "white-dice" : "black-dice");
+  dice.id = `piece-${piece.id}`;
+  dice.className = "dice";
 
-  dice.className = `dice ${colorClass}`;
   dice.style.transform = diceRotations[piece.top];
   dice.dataset.rotation = "0,0";
+
 
   if (isGhost) {
     wrapper.className = "ghost-wrapper";
     dice.classList.add("ghost-dice");
   }
 
+
   ["front", "back", "right", "left", "top", "bottom"].forEach((side) => {
+
     const face = document.createElement("div");
+
     face.className = `face ${side}`;
-    face.style.background = piece.isKing
-      ? (piece.player === "white" ? "#c00" : "#06c")
-      : (piece.player === "white" ? "#fff" : "#222");
+
+
+    
+    if (piece.isKing) {
+
+  face.style.background = reverseColor
+    ? (piece.player === "white" ? "#06c" : "#c00")
+    : (piece.player === "white" ? "#c00" : "#06c");
+
+
+
+} else {
+
+  let diceColor;
+
+  if (piece.player === "white") {
+    diceColor = "#fff";
+  } else {
+    diceColor = "#222";
+  }
+
+  if (reverseColor) {
+    diceColor = piece.player === "white"
+      ? "#222"
+      : "#fff";
+  }
+
+  face.style.background = diceColor;
+
+}
+
+
 
     const faceNumberMap = {
       front: 1,
@@ -1198,20 +1520,52 @@ function createDiceElement(piece, isGhost = false) {
       top: 2,
       bottom: 5,
     };
+
+
     const faceNum = faceNumberMap[side];
-    pipsMap[faceNum].forEach(i => {
+
+
+    pipsMap[faceNum].forEach(() => {
+
       const pip = document.createElement("div");
+
       pip.className = "pip";
-      pip.style.backgroundColor = piece.player === "white" ? "#000" : "#fff";
+
+
+      // 目の色
+      if (reverseColor) {
+
+        pip.style.backgroundColor =
+          piece.player === "white"
+            ? "#fff"
+            : "#000";
+
+      } else {
+
+        pip.style.backgroundColor =
+          piece.player === "white"
+            ? "#000"
+            : "#fff";
+
+      }
+
+
       face.appendChild(pip);
+
     });
+
+
     dice.appendChild(face);
+
   });
+
+
 
   if (isGhost) {
     wrapper.appendChild(dice);
     return wrapper;
   }
+
 
   return dice;
 }
