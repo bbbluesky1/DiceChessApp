@@ -593,6 +593,10 @@ main#game-container {
 
 #resign-button:hover{
   background:#555;
+}  
+#resign-modal .modal-content button{
+  margin: 10px 8px 0;
+  min-width: 90px;
 }
   </style>
 </head>
@@ -661,6 +665,13 @@ main#game-container {
  <button id="resign-button">
 🏳️ resign
 </button>
+<div id="resign-modal" class="modal hidden">
+  <div class="modal-content">
+    <p>投了しますか？</p>
+    <button id="resign-yes">はい</button>
+    <button id="resign-no">いいえ</button>
+  </div>
+</div>
   </div>
 <!--  
   <div id="robot-area">
@@ -962,47 +973,43 @@ localStorage.setItem(rateKey, "true");
 },1000);
 
 
-document.getElementById("resign-button")
-.onclick = async function(){
+document.getElementById("resign-button").onclick = function () {
+  document.getElementById("resign-modal").classList.remove("hidden");
+};
 
-  if(!roomid) return;
+document.getElementById("resign-no").onclick = function () {
+  document.getElementById("resign-modal").classList.add("hidden");
+};
 
+document.getElementById("resign-yes").onclick = async function () {
 
-  if(!confirm("投了しますか？")){
-    return;
-  }
+  document.getElementById("resign-modal").classList.add("hidden");
 
+  if (!roomid) return;
 
   const snap = await firebase.database()
     .ref("rooms/" + roomid)
     .once("value");
 
-
   const room = snap.val();
 
-
-  if(!room){
+  if (!room) {
     console.error("roomがありません");
     return;
   }
 
-
   const winner =
     room.name === myname
-    ? room.opponent
-    : room.name;
-
+      ? room.opponent
+      : room.name;
 
   await firebase.database()
     .ref("rooms/" + roomid)
     .update({
-
       winner: winner,
       loser: myname,
       status: "finished"
-
     });
-
 };
 
   function showModal(message) {
