@@ -193,16 +193,19 @@ document.getElementById('back-button').addEventListener('click', () => {
         }
 
         container.innerHTML = "";
-        snapshot.forEach((doc, index) => {
-          const data = doc.data();
-          const row = document.createElement("div");
-          row.className = "player-row";
-          row.innerHTML = `
-            <div class="player-name">${index + 1}. ${data.name}</div>
-            <div class="player-rate">${data.rate} pt</div>
-          `;
-          container.appendChild(row);
-        });
+        let rank = 1;
+
+snapshot.forEach((doc) => {
+  const data = doc.data();
+  const row = document.createElement("div");
+  row.className = "player-row";
+  row.innerHTML = `
+    <div class="player-name">${rank}. ${data.name}</div>
+    <div class="player-rate">${data.rate} pt</div>
+  `;
+  container.appendChild(row);
+  rank++;
+});
       } catch (e) {
         console.error("ランキング取得失敗", e);
         container.innerHTML = "<p>ランキングの取得に失敗しました。</p>";
