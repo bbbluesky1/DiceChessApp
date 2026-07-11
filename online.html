@@ -19,16 +19,82 @@
     }
 
     body {
-      margin: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-image: url('./space-art-5626853_640.jpg');
-      background-size: cover;
-      background-position: center;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
+  background: linear-gradient(
+    120deg,
+    #4b0082,
+    #0066ff,
+    #00ccff,
+    #ff00aa,
+    #ff6600
+  );
+  background-size: 400% 400%;
+  animation: gradientMove 8s ease infinite;
+
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+
+@keyframes gradientMove {
+  0% {
+    background-position:0% 50%;
+  }
+  50% {
+    background-position:100% 50%;
+  }
+  100% {
+    background-position:0% 50%;
+  }
+}
+
+
+.match-container {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:20px;
+}
+
+
+#match-button {
+  width:260px;
+  height:70px;
+
+  background:rgba(0,0,0,0.75);
+  color:white;
+
+  border:none;
+  border-radius:12px;
+
+  font-size:24px;
+  font-weight:bold;
+
+  cursor:pointer;
+
+  backdrop-filter:blur(5px);
+
+  box-shadow:
+    0 8px 20px rgba(0,0,0,0.4);
+
+  transition:0.2s;
+}
+
+
+#match-button:hover {
+  background:rgba(0,0,0,0.9);
+  transform:scale(1.05);
+}
+
+
+#matchingText {
+  color:white;
+  font-size:20px;
+  font-weight:bold;
+  text-shadow:
+    0 2px 5px black;
+}
 
     .logo {
       font-size: 1.5rem;
@@ -384,11 +450,7 @@ main#game-container {
   }
 }
 
-#match-button {
-  margin-top: 100px;
-  padding: 15px 30px;
-  font-size: 20px;
-}
+
 
 #room-list-container {
   padding: 20px;
@@ -489,6 +551,49 @@ main#game-container {
   .modal-content button:hover {
     background: #3367d6;
   }
+  
+  .chess-clock {
+  width: 120px;
+  padding: 10px 20px;
+
+  background: rgba(0,0,0,0.8);
+  color:white;
+
+  font-size:28px;
+  font-weight:bold;
+
+  text-align:center;
+
+  border-radius:8px;
+
+  margin:10px auto;
+
+  box-shadow:0 4px 10px rgba(0,0,0,0.5);
+}
+
+#resign-button {
+
+  margin-top:15px;
+
+  width:140px;
+  padding:10px;
+
+  background:#222;
+  color:white;
+
+  border:none;
+  border-radius:8px;
+
+  font-size:18px;
+  font-weight:bold;
+
+  cursor:pointer;
+}
+
+
+#resign-button:hover{
+  background:#555;
+}
   </style>
 </head>
 <body>
@@ -510,11 +615,11 @@ main#game-container {
     </nav>
   </header>
   
+  <div class="match-container">
   <button id="match-button">
-オンライン対戦開始
+🕑️10-minute game (loss on time)
 </button>
-<div id="clock">
-白 10:00　黒 10:00
+  <div id="matchingText"></div>
 </div>
 
   <!--  <div id="room-list-container">
@@ -525,30 +630,44 @@ main#game-container {
 
   <main id="game-container">
 
-  <div id="board-container">
-    <div id="opponent-wrapper">
+<div id="board-container">
+
+
+
+<div id="opponent-wrapper">
+    <div id="opponent-clock" class="chess-clock">
+10:00
+</div>
   <img src="./blank-profile-picture-973460_640.png" alt="Opponent Icon" class="player-icon" />
   <div class="player-info">
     <span class="player-name" id="opponentName">???</span>
     <span class="player-rate" id="opponentRate">???</span>
   </div>
 </div>
-    <table id="board"></table>
+    <table id="board">
+        
+    </table>
     <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
     <div id="player-wrapper">
+        <div id="player-clock" class="chess-clock">
+10:00
+</div>
   <img src="./blank-profile-picture-973460_640.png" alt="Player Icon" class="player-icon" />
   <div class="player-info">
     <span class="player-name" id="playerName">???</span>
     <span class="player-rate" id="playerRate">???</span>
   </div>
 </div>
-
+ <button id="resign-button">
+🏳️ resign
+</button>
   </div>
-
+<!--  
   <div id="robot-area">
     <img src="./waving-287_256.gif" alt="Bot" id="robot-avatar" />
     <div id="robot-bubble">こんにちは！ゲームを始めましょう！</div>
   </div>
+  -->
 </main>
 
 <!-- モーダル HTML -->
@@ -567,43 +686,335 @@ main#game-container {
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
 <script>
-    setInterval(async()=>{
+    
 
- const snap =
- await firebase.database()
- .ref("rooms/"+roomid)
- .once("value");
+setInterval(async () => {
 
- const room=snap.val();
-
- if(!room) return;
+  if (!roomid) return;
 
 
- let white=room.timeWhite;
- let black=room.timeBlack;
+  const roomRef = firebase.database()
+    .ref("rooms/" + roomid);
 
 
- function format(t){
-   let m=Math.floor(t/60);
-   let s=t%60;
-   return `${m}:${s.toString().padStart(2,"0")}`;
- }
+  const snap = await roomRef.once("value");
+
+  const room = snap.val();
+
+  if (!room) return;
 
 
- document.getElementById("clock").innerHTML =
- `白 ${format(white)}　黒 ${format(black)}`;
+
+  let white = room.timeWhite;
+  let black = room.timeBlack;
+
+
+
+ // 開始前
+  if(room.lastMoveTime === 0){
+  
+
+    document.getElementById("player-clock").innerHTML =
+format(white);
+
+document.getElementById("opponent-clock").innerHTML =
+format(black);
+
+    return;
+
+  }
+
+
+
+  // 現在手番の経過時間
+  const elapsed =
+    (Date.now() - room.lastMoveTime) / 1000;
+
+
+
+  if(room.turn === room.name){
+
+    white -= elapsed;
+
+  }else if(room.turn === room.opponent){
+
+    black -= elapsed;
+
+  }
+
+
+
+  if(white < 0) white = 0;
+  if(black < 0) black = 0;
+
+
+
+  function format(t){
+
+    let m = Math.floor(t / 60);
+    let s = Math.floor(t % 60);
+
+    return `${m}:${s.toString().padStart(2,"0")}`;
+
+  }
+
+
+
+  // 時計表示
+  document.getElementById("player-clock").innerHTML =
+format(white);
+
+document.getElementById("opponent-clock").innerHTML =
+format(black);
+
+
+
+
+  // ==========================
+  // 時間切れ判定
+  // ==========================
+
+  if(
+    (white <= 0 || black <= 0)
+    &&
+    room.status !== "finished"
+  ){
+
+
+    let loser;
+    let winner;
+
+
+
+    if(white <= 0){
+
+      loser = room.name;
+      winner = room.opponent;
+
+    }
+
+
+    if(black <= 0){
+
+      loser = room.opponent;
+      winner = room.name;
+
+    }
+
+
+
+    if(!winner || !loser){
+      return;
+    }
+
+
+
+    console.log(
+      "時間切れ",
+      loser,
+      "負け",
+      winner,
+      "勝ち"
+    );
+
+
+
+    await roomRef.update({
+
+      winner:winner,
+      loser:loser,
+      status:"finished"
+
+    });
+
+
+
+    return;
+
+  }
+
+
+
+
+
+  // ==========================
+  // 結果後のレート更新
+  // ==========================
+
+  if(
+    room.status === "finished"
+    &&
+    room.winner
+    &&
+    room.loser
+  ){
+
+const rateKey = "rateUpdated_" + roomid + "_" + myname;
+
+if(localStorage.getItem(rateKey)){
+  return;
+}
+
+
+
+    if(
+      myname !== room.winner
+      &&
+      myname !== room.loser
+    ){
+      return;
+    }
+
+
+
+    
+
+
+    const opponentName =
+      myname === room.winner
+      ? room.loser
+      : room.winner;
+
+
+
+    const mySnap = await db2.collection("users")
+      .where("name","==",myname)
+      .get();
+
+
+
+    const oppSnap = await db2.collection("users")
+      .where("name","==",opponentName)
+      .get();
+
+
+
+    if(mySnap.empty || oppSnap.empty){
+      return;
+    }
+
+
+
+    const myDoc = mySnap.docs[0];
+    const oppDoc = oppSnap.docs[0];
+
+
+
+    const myRate =
+      myDoc.data().rate || 1500;
+
+
+    const oppRate =
+      oppDoc.data().rate || 1500;
+
+
+
+    let newRate;
+
+
+
+    if(myname === room.winner){
+
+
+      newRate = calculateEloRating(
+        myRate,
+        oppRate,
+        1
+      );
+
+
+      showModal(
+        `時間切れ勝利\nレート ${myRate} → ${newRate}`
+      );
+
+
+    }else{
+
+
+      newRate = calculateEloRating(
+        myRate,
+        oppRate,
+        0
+      );
+
+
+      showModal(
+        `時間切れ負け\nレート ${myRate} → ${newRate}`
+      );
+
+    }
+
+localStorage.setItem(rateKey, "true");
+
+    await myDoc.ref.update({
+
+      rate:newRate
+
+    });
+    
+    
+
+
+
+  }
 
 
 },1000);
-    
+
+
+document.getElementById("resign-button")
+.onclick = async function(){
+
+  if(!roomid) return;
+
+
+  if(!confirm("投了しますか？")){
+    return;
+  }
+
+
+  const snap = await firebase.database()
+    .ref("rooms/" + roomid)
+    .once("value");
+
+
+  const room = snap.val();
+
+
+  if(!room){
+    console.error("roomがありません");
+    return;
+  }
+
+
+  const winner =
+    room.name === myname
+    ? room.opponent
+    : room.name;
+
+
+  await firebase.database()
+    .ref("rooms/" + roomid)
+    .update({
+
+      winner: winner,
+      loser: myname,
+      status: "finished"
+
+    });
+
+};
 
   function showModal(message) {
     document.getElementById("modal-message").innerText = message;
     document.getElementById("custom-modal").classList.remove("hidden");
   }
 
-  function closeModal() {
-    document.getElementById("custom-modal").classList.add("hidden");
+  function closeModal() { document.getElementById("custom-modal").classList.add("hidden");
+  
+  location.href =
+    "./online.html?myname=" + encodeURIComponent(myname);
+
   }
 
   document.getElementById('back-button').addEventListener('click', () => {
@@ -685,8 +1096,8 @@ function reportVictory() {
 
 function getRate(opponentName){
 
-  //const myName = params.get('myname');
-  const myName = "test";
+  const myName = params.get('myname');
+  //const myName = "test";
   
   Promise.all([
     db2.collection("users").where("name", "==", myName).get(),
@@ -806,6 +1217,14 @@ const resultsRef = firebase.database().ref("rooms/" + roomid);
 document.getElementById("match-button")
 .addEventListener("click", async()=>{
 
+ const button = document.getElementById("match-button");
+
+  // 連打防止
+  button.disabled = true;
+  button.style.opacity = "0.5";
+  button.style.cursor = "not-allowed";
+
+
   const room = await getRandomWaitingRoom();
 
   if(room){
@@ -832,8 +1251,9 @@ document.getElementById("match-button")
   winner:"",
 
   timeWhite:600,
-  timeBlack:600,
-  lastMoveTime: Date.now()
+  timeBlack:600,  
+lastMoveTime:0,
+  timeOverProcessed:false
 });
 
     roomid = newRoomRef.key;
@@ -858,6 +1278,9 @@ let isMatched = false;
 // 待機開始
 function startMatchingTimer(){
 
+document.getElementById("matchingText").innerHTML ="Matching... The match against the bot will start in 30 seconds.";
+
+
   matchTimer = setTimeout(()=>{
 
     if(!isMatched){
@@ -868,7 +1291,7 @@ function startMatchingTimer(){
 
     }
 
-  }, 3000); //30秒待つ
+  }, 30000); //30秒待つ
 
 }
 
@@ -881,7 +1304,12 @@ function matched(){
   if(matchTimer){
     clearTimeout(matchTimer);
   }
+  
+document.getElementById("matchingText").style.display = "none";
 
+document.getElementById("match-button").style.display = "none";
+
+//document.getElementById("clock").style.display = "block";
 }
 
 function startBotMatch(){
@@ -915,14 +1343,16 @@ function startBotMatch(){
   document.getElementById("board-container")
   .style.display="block";
 
-
+/*
   document.getElementById("robot-area")
   .style.display="flex";
 
 
   updateRobotMessage(
     "対戦相手が見つからなかったのでBot戦を開始します！"
+    
   );
+  */
 
 
   // ここで既存のbot.jsの処理開始
@@ -931,14 +1361,26 @@ function startBotMatch(){
 }
 
 
+   function initBotGame(){
+
+  console.log("Bot対戦へ移行");
+
+  window.location.href =
+    `./onlineBot.html?myname=${encodeURIComponent(myname)}`;
+
+}
+
+
+
  var roomid = null;
  var params = new URLSearchParams(window.location.search);
- //var myname = params.get('myname');
- var myname = "test";
+ var myname = params.get('myname');
+ //var myname = "test";
  var room = null;
  let reverseColor = false;
 
 async function getOpponentName(roomId, myName) {
+let opponentName = null;
   try {
     const roomRef = firebase.database().ref("rooms/" + roomId);
     let snapshot = await roomRef.once("value");
@@ -986,16 +1428,24 @@ async function getOpponentName(roomId, myName) {
       
       matched(); //追加
       document.getElementById("board-container").style.display = "block";
-document.getElementById("robot-area").style.display = "flex";
+//document.getElementById("robot-area").style.display = "flex";
       
       reverseColor = true;
       render();   // ←追加
       
       console.log("相手として参加:", myName);
       listenForLosses()
-      let opponentName = (room.name === myName) ? room.opponent : room.name;
-      document.getElementById("opponentName").textContent = room.name;
-      getRate(opponentName);
+      opponentName =
+  room.name === myName
+  ? room.opponent
+  : room.name;
+
+
+document.getElementById("opponentName").textContent =
+  opponentName;
+
+
+getRate(opponentName);
       updateRobotMessage(room.turn + "のターン"); 
     }
 
@@ -1116,7 +1566,7 @@ rooms.forEach((room) => {
 function joinRoom(roomId, myname) {
   const container = document.getElementById("room-list-container");
   const board_container =  document.getElementById("board-container");
-  const robot_area = document.getElementById("robot-area");
+  //const robot_area = document.getElementById("robot-area");
   container.style.display = "none";
   board_container.style.display = "flex";
   robot_area.style.display = "flex";
@@ -1136,10 +1586,11 @@ function joinRoom(roomId, myname) {
 
 
 async function sendMove(roomId, move) {
-  console.log(roomId);
-  // move は例: { from: "e2", to: "e4", player: "A" }
 
-  const movesRef = firebase.database().ref(`rooms/${roomId}/moves`);
+  console.log(roomId);
+
+  const movesRef = firebase.database()
+    .ref(`rooms/${roomId}/moves`);
 
   movesRef.push(move)
     .then(() => {
@@ -1148,44 +1599,68 @@ async function sendMove(roomId, move) {
     .catch((error) => {
       console.error("指し手の送信エラー:", error);
     });
- 
-  // ターンを相手に渡す
+
+
   const roomRef = firebase.database().ref("rooms/" + roomId);
   const snapshot = await roomRef.once("value");
   const room = snapshot.val();
 
+
   const now = Date.now();
 
-let updateData = {
+
+  // 次の手番を決定
+  const nextTurn =
+    room.turn === room.name
+      ? room.opponent
+      : room.name;
+
+
+  let updateData = {
   turn: nextTurn,
   lastMoveTime: now
 };
 
 
-// 今まで手番だった人の時間を減らす
-const elapsed = Math.floor(
-  (now - room.lastMoveTime) / 1000
-);
+let elapsed = 0;
+
+if(room.lastMoveTime !== 0){
+  elapsed = Math.floor(
+    (now - room.lastMoveTime) / 1000
+  );
+}
 
 
 if(room.turn === room.name){
 
   updateData.timeWhite =
-    room.timeWhite - elapsed;
+    Math.max(0, room.timeWhite - elapsed);
+
+  if(updateData.timeWhite <= 0){
+    updateData.winner = room.opponent;
+    updateData.loser = room.name;
+    updateData.status = "finished";
+  }
 
 }else{
 
   updateData.timeBlack =
-    room.timeBlack - elapsed;
+    Math.max(0, room.timeBlack - elapsed);
+
+  if(updateData.timeBlack <= 0){
+    updateData.winner = room.name;
+    updateData.loser = room.opponent;
+    updateData.status = "finished";
+  }
 
 }
 
 
 await roomRef.update(updateData);
+
+
   updateRobotMessage(nextTurn + "のターン");
 }
-
-
 
 async function isMyTurn(myName) {
   const roomRef = firebase.database().ref("rooms/" + roomid);
@@ -1819,9 +2294,11 @@ async function onCellClick(e) {
         from: { y: sr, x: sc },
         to: { y: row, x: col },
         player: myname,
+        diceState: newDie,
         timestamp: Date.now()
       };
-
+console.log("送信直前:");
+console.log(JSON.stringify(move, null, 2));
       sendMove(roomid, move);
 
       if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
@@ -1876,9 +2353,13 @@ async function onCellClick(e) {
         from: { y: sr, x: sc },
         to: { y: row, x: col },
         player: myname,
+        diceState: newDie,
         timestamp: Date.now()
       };
-
+      
+      
+console.log("送信直前:");
+console.log(JSON.stringify(move, null, 2));
       sendMove(roomid, move);
 
       if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
@@ -1933,9 +2414,12 @@ async function onCellClick(e) {
         from: { y: sr, x: sc },
         to: { y: row, x: col },
         player: myname,
+        diceState: newDie,
         timestamp: Date.now()
       };
 
+console.log("送信直前:");
+console.log(JSON.stringify(move, null, 2));
       sendMove(roomid, move);
       return;
     }
@@ -1986,21 +2470,32 @@ function checkWin(attacker) {// checkmate()に変更
   */
 
 
-function listenForEntry(myName,roomId){
-  const moveRef = firebase.database().ref("rooms/" + roomId);
-  moveRef.on("value", (snapshot) => {
-  const room = snapshot.val();
-  if (room.opponent){
-    document.getElementById("opponentName").textContent = room.opponent;
-    getRate(room.opponent);
-    updateRobotMessage(room.turn + "のターン"); 
-  }else{
-    updateRobotMessage("対戦相手を待っています..."); 
-  }
+function listenForEntry(myName, roomId){
+  const roomRef = firebase.database().ref("rooms/" + roomId);
+
+  roomRef.on("value", (snapshot) => {
+    const room = snapshot.val();
+    if (!room) return;
+
+    if (room.opponent){
+
+matched();
+      document.getElementById("opponentName").textContent = room.opponent;
+      getRate(room.opponent);
+
+      // 先手側もゲーム画面表示
+      document.getElementById("board-container").style.display="block";
+      //document.getElementById("robot-area").style.display="flex";
+
+      updateRobotMessage(room.turn + "のターン");
+
+      listenForOpponentMove(myName, roomId);
+
+    }else{
+      updateRobotMessage("対戦相手を待っています...");
+    }
   });
 }
-
-
 
 function listenForOpponentMove(myName,roomId){
   const moveRef = firebase.database().ref("rooms/" + roomId+"/moves");
