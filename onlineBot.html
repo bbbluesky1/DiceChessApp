@@ -682,7 +682,7 @@ function applyAndShowRate(title, result) {
   const after = calculateEloRating(before, 1500, result);
   cachedMyRate = after;
   cachedMyRateReady = true;
-  persistMyRate(after);
+  persistMyRate(after).catch(err => console.error('resign save error:', err));
   const diff = after - before;
   const sign = diff >= 0 ? "+" : "";
   showModal(`${title}\nレート ${before} → ${after} (${sign}${diff})`, true);
@@ -715,6 +715,46 @@ let clockStarted = false;
 let lastTime = null;
 
 
+
+function formatRateChange(before, after) {
+  const diff = after - before;
+  const sign = diff >= 0 ? "+" : "";
+  return `レート ${before} → ${after} (${sign}${diff})`;
+}
+
+async function persistMyRate(newRate) {
+  const myNameSafe = (myname || "").trim();
+  if (!myNameSafe) return;
+
+  const usersRef = db2.collection("users");
+  try {
+    const snap = await usersRef.where("name", "==", myNameSafe).limit(1).get();
+    if (!snap.empty) {
+      await snap.docs[0].ref.set({
+        name: myNameSafe,
+        rate: newRate
+      }, { merge: true });
+    } else {
+      await usersRef.add({
+        name: myNameSafe,
+        rate: newRate
+      });
+    }
+  } catch (err) {
+    console.error("persistMyRate error:", err);
+    throw err;
+  }
+}
+
+async function updateBotElo(result){
+  const botRate = 1500;
+  const myRate = cachedMyRateReady ? cachedMyRate : 1500;
+  const newRate = calculateEloRating(myRate, botRate, result);
+  cachedMyRate = newRate;
+  cachedMyRateReady = true;
+  await persistMyRate(newRate);
+  return formatRateChange(myRate, newRate);
+}
 
 setInterval(async ()=>{
 
@@ -812,46 +852,6 @@ setInterval(async ()=>{
 
 
 
-function formatRateChange(before, after) {
-  const diff = after - before;
-  const sign = diff >= 0 ? "+" : "";
-  return `レート ${before} → ${after} (${sign}${diff})`;
-}
-
-function persistMyRate(newRate) {
-  const myNameSafe = (myname || "").trim();
-  if (!myNameSafe) return;
-
-  const usersRef = db2.collection("users");
-  (async () => {
-    try {
-      const snap = await usersRef.where("name", "==", myNameSafe).limit(1).get();
-      if (!snap.empty) {
-        await snap.docs[0].ref.set({
-          name: myNameSafe,
-          rate: newRate
-        }, { merge: true });
-      } else {
-        await usersRef.add({
-          name: myNameSafe,
-          rate: newRate
-        });
-      }
-    } catch (err) {
-      console.error("persistMyRate error:", err);
-    }
-  })();
-}
-
-async function updateBotElo(result){
-  const botRate = 1500;
-  const myRate = cachedMyRateReady ? cachedMyRate : 1500;
-  const newRate = calculateEloRating(myRate, botRate, result);
-  cachedMyRate = newRate;
-  cachedMyRateReady = true;
-  persistMyRate(newRate);
-  return formatRateChange(myRate, newRate);
-}
 
 document.getElementById("player-clock").innerHTML =
 formatTime(whiteTime);
@@ -889,7 +889,7 @@ document.getElementById("resign-yes").onclick = function () {
 レート ${before} → ${after} (${sign}${diff})`, true);
 
   // 保存は裏で実行。失敗しても表示は止めない
-  persistMyRate(after);
+  persistMyRate(after).catch(err => console.error('resign save error:', err));
 };
 
 function showModal(message, finished=false) {
