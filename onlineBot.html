@@ -643,8 +643,52 @@ const params = new URLSearchParams(location.search);
 const myname = params.get("myname");
 
 console.log("プレイヤー名:", myname);
-    
-    let whiteTime = 600; //10分
+
+let cachedMyRate = 1500;
+let cachedMyRateReady = false;
+
+async function primeMyRate() {
+  const myNameSafe = (myname || "").trim();
+  if (!myNameSafe) {
+    cachedMyRateReady = true;
+    return;
+  }
+
+  try {
+    const snap = await db2.collection("users")
+      .where("name", "==", myNameSafe)
+      .limit(1)
+      .get();
+
+    if (!snap.empty) {
+      cachedMyRate = snap.docs[0].data().rate || 1500;
+    }
+  } catch (err) {
+    console.error("primeMyRate error:", err);
+  } finally {
+    cachedMyRateReady = true;
+  }
+}
+
+primeMyRate();
+
+
+function getCurrentMyRate() {
+  return Number.isFinite(cachedMyRate) ? cachedMyRate : 1500;
+}
+
+function applyAndShowRate(title, result) {
+  const before = getCurrentMyRate();
+  const after = calculateEloRating(before, 1500, result);
+  cachedMyRate = after;
+  cachedMyRateReady = true;
+  persistMyRate(after);
+  const diff = after - before;
+  const sign = diff >= 0 ? "+" : "";
+  showModal(`${title}\nレート ${before} → ${after} (${sign}${diff})`, true);
+}
+
+let whiteTime = 600; //10分
 let blackTime = 600; //10分
 
 let botThinking = false;
@@ -717,9 +761,10 @@ setInterval(async ()=>{
       0
     );
 
-    await myDoc.ref.update({
+    await myDoc.ref.set({
+      name: myname,
       rate:newRate
-    });
+    }, { merge: true });
 
     showModal(
       `時間切れ負け\nレート ${myRate} → ${newRate}`,true
@@ -751,9 +796,10 @@ setInterval(async ()=>{
       1
     );
 
-    await myDoc.ref.update({
+    await myDoc.ref.set({
+      name: myname,
       rate:newRate
-    });
+    }, { merge: true });
 
     showModal(
       `時間切れ勝利\nレート ${myRate} → ${newRate}`,true
@@ -766,38 +812,48 @@ setInterval(async ()=>{
 
 
 
-async function updateBotElo(result){
-
-  const mySnap = await db2.collection("users")
-    .where("name","==",myname)
-    .get();
-
-  if(mySnap.empty) return;
-
-
-  const myDoc = mySnap.docs[0];
-
-  const myRate = myDoc.data().rate || 1500;
-
-  const botRate = 1500;
-
-
-  const newRate = calculateEloRating(
-    myRate,
-    botRate,
-    result
-  );
-
-
-  await myDoc.ref.update({
-    rate:newRate
-  });
-
-
-  return `レート ${myRate} → ${newRate}`;
+function formatRateChange(before, after) {
+  const diff = after - before;
+  const sign = diff >= 0 ? "+" : "";
+  return `レート ${before} → ${after} (${sign}${diff})`;
 }
 
-  document.getElementById("player-clock").innerHTML =
+function persistMyRate(newRate) {
+  const myNameSafe = (myname || "").trim();
+  if (!myNameSafe) return;
+
+  const usersRef = db2.collection("users");
+  (async () => {
+    try {
+      const snap = await usersRef.where("name", "==", myNameSafe).limit(1).get();
+      if (!snap.empty) {
+        await snap.docs[0].ref.set({
+          name: myNameSafe,
+          rate: newRate
+        }, { merge: true });
+      } else {
+        await usersRef.add({
+          name: myNameSafe,
+          rate: newRate
+        });
+      }
+    } catch (err) {
+      console.error("persistMyRate error:", err);
+    }
+  })();
+}
+
+async function updateBotElo(result){
+  const botRate = 1500;
+  const myRate = cachedMyRateReady ? cachedMyRate : 1500;
+  const newRate = calculateEloRating(myRate, botRate, result);
+  cachedMyRate = newRate;
+  cachedMyRateReady = true;
+  persistMyRate(newRate);
+  return formatRateChange(myRate, newRate);
+}
+
+document.getElementById("player-clock").innerHTML =
 formatTime(whiteTime);
 
 document.getElementById("bot-clock").innerHTML =
@@ -814,31 +870,57 @@ document.getElementById("resign-no").onclick = function () {
   document.getElementById("resign-modal").classList.add("hidden");
 };
 
-document.getElementById("resign-yes").onclick = async function () {
+document.getElementById("resign-yes").onclick = function () {
+  const resignModal = document.getElementById("resign-modal");
+  if (resignModal) {
+    resignModal.classList.add("hidden");
+  }
 
-  document.getElementById("resign-modal").classList.add("hidden");
+  const before = getCurrentMyRate();
+  const after = calculateEloRating(before, 1500, 0);
+  cachedMyRate = after;
+  cachedMyRateReady = true;
 
-  const rateMessage = await updateBotElo(0);
+  const diff = after - before;
+  const sign = diff >= 0 ? "+" : "";
 
-  showModal(
-    "Black wins!\n" + rateMessage,
-    true
-  );
+  // 先に確実にモーダル表示
+  showModal(`投了しました
+レート ${before} → ${after} (${sign}${diff})`, true);
+
+  // 保存は裏で実行。失敗しても表示は止めない
+  persistMyRate(after);
 };
 
 function showModal(message, finished=false) {
-  document.getElementById("modal-message").innerText = message;
-
+  const modal = document.getElementById("custom-modal");
+  const msg = document.getElementById("modal-message");
   const btn = document.getElementById("match-button");
-  btn.style.display = "block";
-  btn.textContent = finished ? "マッチングに戻る" : "閉じる";
-  btn.onclick = finished ? backToMatching : closeModal;
 
-  document.getElementById("custom-modal").classList.remove("hidden");
+  if (msg) msg.textContent = message;
+  if (btn) {
+    btn.style.display = "block";
+    btn.textContent = finished ? "マッチングに戻る" : "閉じる";
+    btn.onclick = finished ? backToMatching : closeModal;
+  }
+
+  if (modal) {
+    modal.classList.remove("hidden");
+    modal.style.setProperty("display", "flex", "important");
+    modal.style.setProperty("z-index", "2147483647", "important");
+    modal.style.setProperty("position", "fixed", "important");
+    modal.style.setProperty("inset", "0", "important");
+  }
+  document.body.style.overflow = "hidden";
 }
 
   function closeModal() {
-    document.getElementById("custom-modal").classList.add("hidden");
+    const modal = document.getElementById("custom-modal");
+    if (modal) {
+      modal.classList.add("hidden");
+      modal.style.display = "none";
+    }
+    document.body.style.overflow = "auto";
   }
 
 document.getElementById('back-button').addEventListener('click', () => {
@@ -1404,28 +1486,14 @@ async function onCellClick(e) {
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
-          updateBotElo(1).then(rateText=>{
-
-  showModal(
-    "White wins!\n"+rateText,
-    true
-  );
-
-});
-          endGame();
+          applyAndShowRate("White wins!", 1);
+endGame();
           return;
         }
         if (checkmate("black")) {
           setTimeout(() => {
-            updateBotElo(1).then(rateText=>{
-
-  showModal(
-    "White wins!\n"+rateText,
-    true
-  );
-
-});
-            endGame();
+            applyAndShowRate("White wins!", 1);
+endGame();
           }, 2000);
           return;
         }
@@ -1450,28 +1518,14 @@ async function onCellClick(e) {
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
-          updateBotElo(1).then(rateText=>{
-
-  showModal(
-    "White wins!\n"+rateText,
-    true
-  );
-
-});
-          endGame();
+          applyAndShowRate("White wins!", 1);
+endGame();
           return;
         }
         if (checkmate("black")) {
           setTimeout(() => {
-            updateBotElo(1).then(rateText=>{
-
-  showModal(
-    "White wins!\n"+rateText,
-    true
-  );
-
-});
-            endGame();
+            applyAndShowRate("White wins!", 1);
+endGame();
           }, 2000);
           return;
         }
@@ -1631,28 +1685,14 @@ const bestMove =
     render();
 
    if (currentPlayer === 'black' && state[tr][tc]?.isKing && state[tr][tc]?.color === 'white') {
-  updateBotElo(0).then(rateText => {
-
-  showModal(
-    "Black wins!\n" + rateText,
-    true
-  );
-
-});
-  endGame();
+  applyAndShowRate("Black wins!", 0);
+endGame();
   return;
 }
   if (checkmate("white")) {
     setTimeout(() => {
-      updateBotElo(0).then(rateText => {
-
-  showModal(
-    "Black wins!\n" + rateText,
-    true
-  );
-
-});
-      endGame();
+      applyAndShowRate("Black wins!", 0);
+endGame();
     }, 2000);
     return;
   }
