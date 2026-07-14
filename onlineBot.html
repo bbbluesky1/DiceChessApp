@@ -4,43 +4,58 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>DiceChess</title>
+  
   <style>
     :root {
       --white-cell: #EBECD0;
       --black-cell: #b1b1b1;
-      --board-size: min(90vw, 400px);
+      --board-size: min(92vw, 420px);
       --cell-size: calc(var(--board-size) / 8);
+      --panel: rgba(16, 24, 40, 0.96);
+      --panel-border: rgba(255,255,255,0.10);
+      --clock-bg: linear-gradient(180deg, #1f2937, #111827);
+      --accent: #4f8cff;
     }
 
-    * {
-      box-sizing: border-box;
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
     }
 
     body {
-      background-image: url('./space-art-5626853_640.jpg');
-      background-size: cover;
-      background-position: center;
-      color: white;
       margin: 0;
+      min-height: 100dvh;
+      color: white;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
+      background: #f3f4f6 url('./space-art-5626853_640.jpg') center/cover no-repeat fixed;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      position: relative;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.18);
+      pointer-events: none;
+      z-index: -1;
     }
 
     header {
-      position: static;
       width: 100%;
-      height: 60px;
-      background-color: #222;
+      min-height: 60px;
+      background: rgba(17, 17, 17, 0.96);
       color: white;
-      padding: 0 20px;
+      padding: 0 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       z-index: 1000;
+      flex: 0 0 auto;
+      box-shadow: 0 2px 12px rgba(0,0,0,.25);
     }
 
     #back-button {
@@ -51,16 +66,19 @@
       margin-right: 16px;
       cursor: pointer;
       user-select: none;
+      flex: 0 0 auto;
     }
 
-    #back-button:active {
-      opacity: 0.6;
-    }
+    #back-button:active { opacity: 0.6; }
 
     .logo {
-      font-size: 1.5rem;
-      font-weight: bold;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.35rem;
+      font-weight: 800;
       margin: auto;
+      white-space: nowrap;
     }
 
     .menu-toggle {
@@ -68,12 +86,14 @@
       flex-direction: column;
       cursor: pointer;
       gap: 4px;
+      flex: 0 0 auto;
     }
 
     .menu-toggle div {
       width: 25px;
       height: 3px;
       background-color: #fff;
+      border-radius: 999px;
     }
 
     nav {
@@ -87,6 +107,8 @@
       min-width: 150px;
       box-shadow: 0 4px 8px rgba(0,0,0,0.2);
       z-index: 1100;
+      border-radius: 12px;
+      overflow: hidden;
     }
 
     nav a {
@@ -96,40 +118,138 @@
       border-bottom: 1px solid #555;
     }
 
-    nav a:hover {
-      background-color: #555;
-    }
+    nav a:last-child { border-bottom: none; }
+    nav a:hover { background-color: #555; }
 
-    body.show-menu nav {
-      display: flex;
-    }
+    body.show-menu nav { display: flex; }
 
     main#game-container {
-      position: static;
-      width: 100vw;
-      max-width: 100vw;
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 12px 12px 18px;
       display: flex;
-      flex-direction: row;
-      gap: 20px;
-      align-items: flex-start;
-      background: rgba(0,0,0,0.8);
-      border-radius: 8px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
-      padding: 20px;
-      box-sizing: border-box;
-      overflow-x: auto;
-      overflow-y: visible;
-      min-height: calc(100vh - 60px);
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      min-height: calc(100dvh - 60px);
+      overflow: visible;
+    }
+
+    .player-bar {
+      width: 100%;
+      background: var(--panel);
+      border: 1px solid var(--panel-border);
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.24);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+
+    .player-info {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .player-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,.9);
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      flex: 0 0 auto;
+      background: #222;
+    }
+
+    .emoji-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.55rem;
+      line-height: 1;
+      font-family: "Segoe UI Emoji", "Apple Color Emoji", system-ui, sans-serif;
+      background: linear-gradient(180deg, #2d3748, #1a202c);
+      color: #fff;
+      user-select: none;
+    }
+
+    .player-text {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      line-height: 1.15;
+    }
+
+    .player-name-line {
+      font-size: 1.03rem;
+      font-weight: 800;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .player-subline {
+      margin-top: 3px;
+      font-size: 0.74rem;
+      letter-spacing: .12em;
+      color: #cbd5e1;
+    }
+
+    #robot-bubble {
+      margin-top: 4px;
+      width: 100%;
+      max-width: 300px;
+      color: #dbeafe;
+      font-size: 0.8rem;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      background: transparent;
+      border: none;
+      padding: 0;
+      box-shadow: none;
+      height: auto;
+      position: static;
+    }
+
+    #robot-bubble::before { display: none; }
+
+    .chess-clock {
+      min-width: 96px;
+      padding: 8px 12px;
+      background: var(--clock-bg);
+      color: #fff;
+      font-size: 1.15rem;
+      font-weight: 800;
+      text-align: center;
+      border-radius: 14px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), 0 8px 18px rgba(0,0,0,.35);
+      font-variant-numeric: tabular-nums;
+      flex: 0 0 auto;
     }
 
     #board-container {
-      width: var(--board-size);
-      height: var(--board-size);
-      flex-shrink: 1;
-      max-width: 100%;
-      max-height: 100%;
+      width: min(100%, var(--board-size));
+      aspect-ratio: 1 / 1;
       position: relative;
-      min-width: 280px;
+      min-width: 0;
+      flex: 0 0 auto;
+      margin: 0;
+      border-radius: 18px;
+      overflow: visible;
     }
 
     table#board {
@@ -138,27 +258,23 @@
       width: 100%;
       height: 100%;
       table-layout: fixed;
+      background: #000;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 18px 50px rgba(0,0,0,.38);
     }
 
     td {
       width: var(--cell-size);
-      height: var(--cell-size); /* ★ 固定 */
+      height: var(--cell-size);
       position: relative;
       perspective: 1000px;
       box-sizing: border-box;
     }
 
-    td.white {
-      background-color: var(--white-cell);
-    }
-
-    td.black {
-      background-color: var(--black-cell);
-    }
-
-    td.selected {
-      outline: 3px solid yellow;
-    }
+    td.white { background-color: var(--white-cell); }
+    td.black { background-color: var(--black-cell); }
+    td.selected { outline: 3px solid yellow; outline-offset: -3px; }
 
     .dice {
       width: 90%;
@@ -207,22 +323,20 @@
     }
 
     #replay-controls {
-      margin: 12px auto 0;
-      max-width: 300px;
+      margin: 8px auto 0;
+      max-width: 420px;
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 10px;
       width: 100%;
-      background: rgba(255, 255, 255, 0.5);
+      background: rgba(255, 255, 255, 0.82);
       color: #000;
       padding: 10px;
-      border-radius: 10px;
+      border-radius: 12px;
     }
 
-    .hidden {
-      display: none!important;
-    }
+    .hidden { display: none!important; }
 
     #replay-controls button {
       flex: 1;
@@ -255,100 +369,119 @@
     }
 
     #robot-area {
-      display: flex;
+      order: 0;
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    #robot-area .player-info {
       align-items: center;
-      gap: 16px;
-      padding: 12px;
+    }
+
+    #robot-area .player-text {
       justify-content: center;
     }
 
-    #robot-icon-name {
-      display: flex;
-      flex-direction: column;
+    #robot-name {
+      font-size: 1.03rem;
+      font-weight: 800;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
+    }
+
+    #player-area {
+      order: 2;
+      flex-direction: row;
+    }
+
+    #player-area .player-info {
       align-items: center;
     }
 
-    #robot-avatar {
-      width: 60px;
-      height: 60px;
-      border-radius: 6px;
-      object-fit: cover;
-      border: 2px solid white;
-    }
-
-    #robot-name {
-      margin-top: 6px;
-      font-weight: bold;
-      font-size: 0.9rem;
-      color: white;
-    }
-
-    #robot-bubble {
-      background-color: #fff;
-      color: #000;
-      border: 2px solid #888;
-      border-radius: 16px;
-      padding: 10px 14px;
-      width: 200px;
-      height: 65px;
-      font-size: 14px;
-      position: relative;
-      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-      overflow-wrap: break-word;
+    #player-name {
+      font-size: 1.03rem;
+      font-weight: 800;
+      color: #fff;
       overflow: hidden;
-      box-sizing: border-box;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      display: block;
     }
 
-    #robot-bubble::before {
-      content: "";
-      position: absolute;
-      left: -10px;
-      top: 14px;
-      width: 0;
-      height: 0;
-      border: 10px solid transparent;
-      border-right-color: #fff;
+    .player-side-note {
+      font-size: 0.74rem;
+      letter-spacing: .12em;
+      color: #cbd5e1;
+      margin-top: 3px;
     }
 
-    @media (max-width: 768px) {
-      main#game-container {
-        flex-direction: column;
-        height: auto;
-        padding: 10px 20px;
-      }
-
-      #board-container {
-        width: 100%;
-        height: auto;
-        aspect-ratio: 1 / 1;
-      }
-
-      #robot-area {
-        width: 100%;
-        margin-bottom: 10px;
-      }
-
-      #replay-controls button {
-        font-size: 1.1rem;
-      }
+    #resign-button {
+      order: 3;
+      width: min(100%, 320px);
+      margin-top: 4px;
+      padding: 12px 16px;
+      background: linear-gradient(180deg, #2c3e56, #1f2a3d);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 20px rgba(0,0,0,.25);
     }
 
-    .eval-mark {
-      font-size: 18px;
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      background-color: var(--mark-bg-color);
-      border-radius: 4px;
-      padding: 1px 4px;
+    #resign-button:active { transform: scale(.98); }
+    #resign-button:hover { filter: brightness(1.08); }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 16px;
+    }
+
+    .modal.hidden { display: none; }
+
+    .modal-content {
+      background: #fff;
       color: #000;
+      padding: 20px 24px;
+      border-radius: 14px;
+      text-align: center;
+      width: min(92vw, 360px);
+      font-size: 1.05rem;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.35);
     }
 
-    @media (max-width: 768px) {
-      .eval-mark {
-        font-size: 12px;
-        padding: 1px 2px;
-      }
+    .modal-content button {
+      margin-top: 16px;
+      padding: 8px 16px;
+      font-size: 1rem;
+      border: none;
+      background: #4285F4;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover { background: #3367d6; }
+
+    /* OKボタンを消してもモーダルを閉じられるように、戻るボタンは常時見えるようにする */
+    #match-button {
+      display: inline-block !important;
+    }
+
+    #resign-modal .modal-content button {
+      margin: 10px 8px 0;
+      min-width: 90px;
     }
 
     .spinner {
@@ -366,96 +499,76 @@
       100% { transform: rotate(360deg); }
     }
 
-    .modal {
-      position: fixed;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      background: rgba(0, 0, 0, 0.6);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-    }
-
-    .modal.hidden {
-      display: none;
-    }
-
-    .modal-content {
-      background: #fff;
+    .eval-mark {
+      font-size: 18px;
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background-color: var(--mark-bg-color);
+      border-radius: 4px;
+      padding: 1px 4px;
       color: #000;
-      padding: 20px 30px;
-      border-radius: 12px;
-      text-align: center;
-      max-width: 80%;
-      font-size: 1.2rem;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
 
-    .modal-content button {
-      margin-top: 20px;
-      padding: 8px 16px;
-      font-size: 1rem;
-      border: none;
-      background: #4285F4;
-      color: white;
-      border-radius: 8px;
-      cursor: pointer;
+    @media (max-width: 768px) {
+      main#game-container {
+        width: 100%;
+        padding: 10px 10px 18px;
+        gap: 8px;
+      }
+
+      .player-bar {
+        border-radius: 16px;
+        padding: 8px 10px;
+      }
+
+      .player-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 11px;
+      }
+
+      .player-name-line,
+      #robot-name,
+      #player-name {
+        font-size: 0.95rem;
+      }
+
+      .chess-clock {
+        min-width: 82px;
+        padding: 7px 10px;
+        font-size: 1rem;
+      }
+
+      #board-container {
+        width: min(96vw, 430px);
+      }
+
+      #robot-bubble {
+        max-width: 100%;
+        font-size: 0.72rem;
+      }
+
+      #resign-button {
+        width: min(100%, 280px);
+        font-size: 1rem;
+      }
+
+      #replay-controls {
+        width: 100%;
+      }
+
+      #replay-controls button {
+        font-size: 1rem;
+      }
+
+      .eval-mark {
+        font-size: 12px;
+        padding: 1px 2px;
+      }
     }
-
-    .modal-content button:hover {
-      background: #3367d6;
-    }
-    .chess-clock {
-  width:120px;
-
-  padding:10px 20px;
-
-  background:rgba(0,0,0,0.8);
-  color:white;
-
-  font-size:28px;
-  font-weight:bold;
-
-  text-align:center;
-
-  border-radius:8px;
-
-  margin:10px auto;
-
-  box-shadow:
-    0 4px 10px rgba(0,0,0,0.5);
-}
-
-#resign-button {
-
-  margin-top:15px;
-
-  width:140px;
-  padding:10px;
-
-  background:#222;
-  color:white;
-
-  border:none;
-  border-radius:8px;
-
-  font-size:18px;
-  font-weight:bold;
-
-  cursor:pointer;
-}
-
-
-#resign-button:hover{
-  background:#555;
-}
-#resign-modal .modal-content button{
-  margin: 10px 8px 0;
-  min-width: 90px;
-}
-
   </style>
+
 </head>
 <body>
 
@@ -475,50 +588,61 @@
     </nav>
   </header>
 
+  
   <main id="game-container">
-    <div id="robot-area">
-          <div id="bot-clock" class="chess-clock">
-10:00
-</div>
-      <div id="robot-icon-name">
-        <img src="./human-5894669_640.jpg" alt="Bot" id="robot-avatar" />
-        <span id="robot-name">🤖 Bot</span>
+    <div id="robot-area" class="player-bar">
+      <div class="player-info">
+        <img src="./human-5894669_640.jpg" alt="Bot" id="robot-avatar" class="player-avatar" />
+        <div class="player-text">
+          <span id="robot-name" class="player-name-line">🤖 Bot</span>
+          <div id="robot-bubble">No opponent was found, so a match against a bot is starting.</div>
+        </div>
       </div>
 
-      <div id="robot-bubble">No opponent was found, so a match against a bot is starting.</div>
+      <div id="bot-clock" class="chess-clock">10:00</div>
     </div>
 
     <div id="board-container">
       <table id="board"></table>
-      <button id="resign-button">
-🏳️ resign
-</button>
-<div id="resign-modal" class="modal hidden">
-  <div class="modal-content">
-    <p>投了しますか？</p>
-    <button id="resign-yes">はい</button>
-    <button id="resign-no">いいえ</button>
-  </div>
-</div>
-      <div id="player-clock" class="chess-clock">
-10:00
-</div>
-      <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
-      <div id="replay-controls" class="hidden">
-        <div id="loading-spinner" class="spinner" style="display: none;"></div>
-        <button id="prev-button" onclick="prevMove()">⏮</button>
-        <button id="next-button" onclick="nextMove()">⏭</button>
-        <p id="move-description"></p>
-        <p id="evaluation"></p>
+    </div>
+
+    <div id="player-area" class="player-bar">
+      <div class="player-info">
+        <div class="player-avatar emoji-avatar" aria-label="Player">🙋</div>
+        <div class="player-text">
+          <span id="player-name">🙋 Player</span>
+          <div class="player-side-note">YOU</div>
+        </div>
+      </div>
+
+      <div id="player-clock" class="chess-clock">10:00</div>
+    </div>
+
+    <button id="resign-button">🏳️ resign</button>
+
+    <div id="resign-modal" class="modal hidden">
+      <div class="modal-content">
+        <p>投了しますか？</p>
+        <button id="resign-yes">はい</button>
+        <button id="resign-no">いいえ</button>
       </div>
     </div>
+
+    <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
+
+    <div id="replay-controls" class="hidden">
+      <div id="loading-spinner" class="spinner" style="display: none;"></div>
+      <button id="prev-button" onclick="prevMove()">⏮</button>
+      <button id="next-button" onclick="nextMove()">⏭</button>
+      <p id="move-description"></p>
+      <p id="evaluation"></p>
+    </div>
   </main>
+
 
   <div id="custom-modal" class="modal hidden">
    <div class="modal-content">
   <p id="modal-message"></p>
-
-  <button onclick="closeModal()">OK</button>
 
   <button id="match-button" onclick="backToMatching()" style="display:none;">
     マッチングに戻る
