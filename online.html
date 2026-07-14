@@ -620,6 +620,7 @@
     let myname = params.get("myname") || `Guest_${Math.floor(Math.random() * 1000)}`;
     let roomid = null;
     let roomUnsub = null;
+    let leavingRoom = false;
     let moveListener = null;
     let isMatched = false;
     let isCancelRequested = false;
@@ -691,6 +692,85 @@
     }
 
     document.getElementById("modal-ok").onclick = closeModal;
+
+    function clearMatchTimers() {
+      if (matchTimer) {
+        clearTimeout(matchTimer);
+        matchTimer = null;
+      }
+      if (matchmakingPollTimer) {
+        clearInterval(matchmakingPollTimer);
+        matchmakingPollTimer = null;
+      }
+    }
+
+    function stopRoomListeners() {
+      if (roomUnsub) {
+        roomUnsub.off();
+        roomUnsub = null;
+      }
+      if (moveListener) {
+        moveListener.off();
+        moveListener = null;
+      }
+    }
+
+    async function leaveRoomAndGoHome() {
+      if (leavingRoom) return;
+      leavingRoom = true;
+      isCancelRequested = true;
+      clearMatchTimers();
+      stopRoomListeners();
+
+      const currentRoomId = roomid;
+      roomid = null;
+      room = null;
+      finishedHandled = false;
+      selected = null;
+      ghostMoves = [];
+
+      if (currentRoomId) {
+        try {
+          await db.ref("rooms/" + currentRoomId).remove();
+        } catch (e) {}
+      }
+
+      location.href = "./online.html?myname=" + encodeURIComponent(myname);
+    }
+
+    async function acknowledgeFinishedRoom(roomSnapshot) {
+      if (!roomid || !roomSnapshot) return;
+      const roomRef = db.ref("rooms/" + roomid);
+      const ackField = roomSnapshot.name === myname ? "ackWhite" : "ackBlack";
+      try {
+        await roomRef.update({ [ackField]: true });
+        const latest = (await roomRef.once("value")).val();
+        if (latest && latest.status === "finished" && latest.ackWhite && latest.ackBlack) {
+          setTimeout(() => {
+            roomRef.remove().catch(() => {});
+          }, 1500);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    async function finishByResign(winner, loser) {
+      if (!roomid) return;
+      const roomRef = db.ref("rooms/" + roomid);
+      try {
+        await roomRef.update({
+          winner,
+          loser,
+          status: "finished",
+          finishedAt: Date.now(),
+          ackWhite: false,
+          ackBlack: false
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
 
     function calculateEloRating(Ra, Rb, result, K = 32) {
       const Ea = 1 / (1 + Math.pow(10, (Rb - Ra) / 400));
@@ -1178,10 +1258,13 @@
               const newRate = calculateEloRating(myRate, oppRate, result);
               await myDoc.ref.update({ rate: newRate });
               showModal(`${result === 1 ? "勝利" : "敗北"}\nレート ${myRate} → ${newRate}`);
+              await acknowledgeFinishedRoom(room);
             }
           } catch (e) {
             console.error(e);
           }
+        } else {
+          await acknowledgeFinishedRoom(room);
         }
       }
     }
@@ -1290,14 +1373,6 @@
       const snap = await roomRef.once("value");
       const room = snap.val();
       roomid = roomId;
-      roomRef.onDisconnect().update({
-        name: "",
-        moves: "",
-        opponent: "",
-        status: "waiting",
-        turn: "",
-        winner: "",
-      }).catch(() => {});
 
       if (!room) return null;
 
@@ -1586,8 +1661,20 @@
     }
 
     document.getElementById("match-button").onclick = findAndMatch;
-    document.getElementById("cancel-match").onclick = () => location.reload();
-    document.getElementById("back-button").onclick = () => history.back();
+    document.getElementById("cancel-match").onclick = async () => {
+      if (!roomid) {
+        location.reload();
+        return;
+      }
+      await leaveRoomAndGoHome();
+    };
+    document.getElementById("back-button").onclick = async () => {
+      if (!roomid) {
+        history.back();
+        return;
+      }
+      document.getElementById("resign-modal").classList.remove("hidden");
+    };
 
     document.getElementById("resign-button").onclick = () => document.getElementById("resign-modal").classList.remove("hidden");
     document.getElementById("resign-no").onclick = () => document.getElementById("resign-modal").classList.add("hidden");
@@ -1598,7 +1685,8 @@
       room = snap.val();
       if (!room || isCancelRequested) return;
       const winner = room.name === myname ? room.opponent : room.name;
-      await db.ref("rooms/" + roomid).update({ winner: winner, loser: myname, status: "finished" });
+      await finishByResign(winner, myname);
+      showStatus("対局終了。結果を反映中...");
     };
 
     async function init() {
