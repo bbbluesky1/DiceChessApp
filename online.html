@@ -444,38 +444,49 @@
       min-height: 20px;
     }
 
-    .modal {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.8);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      z-index: 1000;
-      padding: 16px;
-    }
-
     .hidden { display: none !important; }
 
-    .modal-content {
+    .inline-panel {
+      width: min(100%, 520px);
       background: #1e293b;
       color: white;
-      padding: 30px;
+      padding: 22px 18px;
       border-radius: 20px;
       text-align: center;
-      max-width: 320px;
       border: 2px solid #2d7cff;
       box-shadow: 0 18px 60px rgba(0,0,0,.5);
       white-space: pre-line;
+      margin-top: 4px;
     }
 
-    .modal-content button {
-      margin: 10px 8px 0;
-      padding: 10px 20px;
-      border-radius: 8px;
+    .inline-panel .panel-title {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 8px;
+      letter-spacing: .5px;
+    }
+
+    .inline-panel .panel-message {
+      font-size: 16px;
+      line-height: 1.5;
+      color: #e2e8f0;
+      margin-bottom: 14px;
+    }
+
+    .inline-panel .panel-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .inline-panel .panel-actions button {
+      padding: 10px 18px;
+      border-radius: 10px;
       border: none;
       cursor: pointer;
       font-weight: 800;
+      min-width: 96px;
     }
 
     .btn-blue { background: #2d7cff; color: white; }
@@ -568,6 +579,23 @@
       <table id="board" aria-label="DiceChess board"></table>
       <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
       <div id="game-status" class="status-line"></div>
+
+      <div id="result-panel" class="inline-panel hidden">
+        <div id="result-title" class="panel-title"></div>
+        <div id="result-detail" class="panel-message"></div>
+        <div class="panel-actions">
+          <button id="result-home" class="btn-blue">ホームへ戻る</button>
+        </div>
+      </div>
+
+      <div id="resign-panel" class="inline-panel hidden">
+        <div class="panel-title">投了しますか？</div>
+        <div class="panel-actions">
+          <button id="resign-yes" class="btn-red">はい</button>
+          <button id="resign-no" class="btn-gray">いいえ</button>
+        </div>
+      </div>
+
       <button id="resign-button" class="resign-btn">🏳️ resign</button>
     </div>
 
@@ -578,21 +606,6 @@
       </div>
       <img src="./blank-profile-picture-973460_640.png" alt="Player Icon" class="player-icon" />
       <div id="player-clock" class="chess-clock">10:00</div>
-    </div>
-  </div>
-
-  <div id="resign-modal" class="modal hidden">
-    <div class="modal-content">
-      <p>投了しますか？</p>
-      <button id="resign-yes" class="btn-red">はい</button>
-      <button id="resign-no" class="btn-gray">いいえ</button>
-    </div>
-  </div>
-
-  <div id="custom-modal" class="modal hidden">
-    <div class="modal-content">
-      <p id="modal-message"></p>
-      <button id="modal-ok" class="btn-blue">OK</button>
     </div>
   </div>
 
@@ -681,17 +694,34 @@
       board.classList.toggle("flipped", myColor === "black");
     }
 
-    function showModal(message) {
-      document.getElementById("modal-message").innerText = message;
-      document.getElementById("custom-modal").classList.remove("hidden");
+    function showResultPanel(title, detail) {
+      document.getElementById("result-title").innerText = title;
+      document.getElementById("result-detail").innerText = detail || "";
+      document.getElementById("result-panel").classList.remove("hidden");
+      document.getElementById("resign-panel").classList.add("hidden");
+      showStatus(detail || "対局終了");
     }
 
-    function closeModal() {
-      document.getElementById("custom-modal").classList.add("hidden");
-      location.href = "./online.html?myname=" + encodeURIComponent(myname);
+    function hideResultPanel() {
+      document.getElementById("result-panel").classList.add("hidden");
     }
 
-    document.getElementById("modal-ok").onclick = closeModal;
+    function showResignPanel() {
+      document.getElementById("resign-panel").classList.remove("hidden");
+      document.getElementById("result-panel").classList.add("hidden");
+    }
+
+    function hideResignPanel() {
+      document.getElementById("resign-panel").classList.add("hidden");
+    }
+
+    async function returnHome() {
+      hideResultPanel();
+      hideResignPanel();
+      await leaveRoomAndGoHome();
+    }
+
+    document.getElementById("result-home").onclick = returnHome;
 
     function clearMatchTimers() {
       if (matchTimer) {
@@ -1244,6 +1274,8 @@
         if (!finishedHandled && (myname === room.winner || myname === room.loser)) {
           finishedHandled = true;
           const opponentName = myname === room.winner ? room.loser : room.winner;
+          const result = myname === room.winner ? 1 : 0;
+          let showed = false;
           try {
             const [mySnap, oppSnap] = await Promise.all([
               db2.collection("users").where("name", "==", myname).get(),
@@ -1254,15 +1286,18 @@
               const oppDoc = oppSnap.docs[0];
               const myRate = myDoc.data().rate || 1500;
               const oppRate = oppDoc.data().rate || 1500;
-              const result = myname === room.winner ? 1 : 0;
               const newRate = calculateEloRating(myRate, oppRate, result);
               await myDoc.ref.update({ rate: newRate });
-              showModal(`${result === 1 ? "勝利" : "敗北"}\nレート ${myRate} → ${newRate}`);
-              await acknowledgeFinishedRoom(room);
+              showResultPanel(result === 1 ? "勝利" : "敗北", `レート ${myRate} → ${newRate}`);
+              showed = true;
             }
           } catch (e) {
             console.error(e);
           }
+          if (!showed) {
+            showResultPanel(result === 1 ? "勝利" : "敗北", "レート更新の取得に失敗しました");
+          }
+          await acknowledgeFinishedRoom(room);
         } else {
           await acknowledgeFinishedRoom(room);
         }
@@ -1676,10 +1711,10 @@
       document.getElementById("resign-modal").classList.remove("hidden");
     };
 
-    document.getElementById("resign-button").onclick = () => document.getElementById("resign-modal").classList.remove("hidden");
-    document.getElementById("resign-no").onclick = () => document.getElementById("resign-modal").classList.add("hidden");
+    document.getElementById("resign-button").onclick = () => showResignPanel();
+    document.getElementById("resign-no").onclick = () => hideResignPanel();
     document.getElementById("resign-yes").onclick = async () => {
-      document.getElementById("resign-modal").classList.add("hidden");
+      hideResignPanel();
       if (!roomid) return;
       const snap = await db.ref("rooms/" + roomid).once("value");
       room = snap.val();
