@@ -534,7 +534,7 @@
 
     <div class="info-box">
       <div class="info-row"><span>⏱ Time</span><span>10 min</span></div>
-      <div class="info-row"><span>🌍 Online</span><span id="online-count">124</span></div>
+      <div class="info-row"><span>🌍 Online</span><span id="online-count">0</span></div>
       <div class="info-row"><span>⌛ Wait</span><span>&lt;10 sec</span></div>
     </div>
 
@@ -629,6 +629,14 @@
     const db = firebase.database();
     const db2 = firebase.firestore();
 
+    const sessionId = (window.crypto && crypto.randomUUID)
+      ? crypto.randomUUID()
+      : `sess_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    let presenceRef = null;
+    let connectedRef = null;
+    let presenceCountRef = null;
+    let presenceInitialized = false;
+
     const params = new URLSearchParams(location.search);
     let myname = params.get("myname") || `Guest_${Math.floor(Math.random() * 1000)}`;
     let roomid = null;
@@ -674,6 +682,35 @@
     function switchScreen(id) {
       document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
       document.getElementById(id).classList.add("active");
+    }
+
+    function updateOnlineCount(count) {
+      const el = document.getElementById("online-count");
+      if (el) el.textContent = String(count);
+    }
+
+    function startOnlinePresence() {
+      if (presenceInitialized) return;
+      presenceInitialized = true;
+
+      presenceRef = db.ref(`presence/${sessionId}`);
+      connectedRef = db.ref(".info/connected");
+      presenceCountRef = db.ref("presence");
+
+      connectedRef.on("value", (snap) => {
+        if (snap.val() === true) {
+          presenceRef.set({
+            name: myname,
+            connectedAt: firebase.database.ServerValue.TIMESTAMP
+          }).catch(() => {});
+          presenceRef.onDisconnect().remove().catch(() => {});
+        }
+      });
+
+      presenceCountRef.on("value", (snap) => {
+        const users = snap.val() || {};
+        updateOnlineCount(Object.keys(users).length);
+      });
     }
 
     function formatTime(t) {
@@ -1713,6 +1750,12 @@
 
     document.getElementById("resign-button").onclick = () => showResignPanel();
     document.getElementById("resign-no").onclick = () => hideResignPanel();
+    window.addEventListener("beforeunload", () => {
+      try {
+        if (presenceRef) presenceRef.remove();
+      } catch (e) {}
+    });
+
     document.getElementById("resign-yes").onclick = async () => {
       hideResignPanel();
       if (!roomid) return;
@@ -1730,6 +1773,7 @@
       document.getElementById("playerRate").innerText = "1200";
       document.getElementById("matching-playerRate").innerText = "1200";
       setupBoard();
+      startOnlinePresence();
       try {
         const mySnap = await db2.collection("users").where("name", "==", myname).get();
         if (!mySnap.empty) {
