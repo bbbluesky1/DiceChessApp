@@ -1,180 +1,355 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DiceChess</title>
+  <title>DiceChess Online</title>
   <style>
     :root {
-  --white-cell: #EBECD0;
-  --black-cell: #739552;
-  --board-size: min(80vmin, 480px);
-  --cell-size: calc(var(--board-size) / 8);
-}
-
-
-    * {
-      box-sizing: border-box;
+      --bg-1: #071221;
+      --bg-2: #02070f;
+      --panel: #101827;
+      --panel-2: #111827;
+      --line: rgba(255,255,255,.10);
+      --blue: #2d7cff;
+      --blue-2: #1565ff;
+      --gold: #ffd54a;
+      --text-dim: #b8c7d9;
+      --red: #b33645;
+      --white-cell: #EBECD0;
+      --black-cell: #739552;
+      --board-size: min(80vmin, 480px);
+      --cell-size: calc(var(--board-size) / 8);
     }
+
+    * { box-sizing: border-box; }
 
     body {
-  background: linear-gradient(
-    120deg,
-    #4b0082,
-    #0066ff,
-    #00ccff,
-    #ff00aa,
-    #ff6600
-  );
-  background-size: 400% 400%;
-  animation: gradientMove 8s ease infinite;
-
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-}
-
-
-@keyframes gradientMove {
-  0% {
-    background-position:0% 50%;
-  }
-  50% {
-    background-position:100% 50%;
-  }
-  100% {
-    background-position:0% 50%;
-  }
-}
-
-
-.match-container {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:20px;
-}
-
-
-#match-button {
-  width:260px;
-  height:70px;
-
-  background:rgba(0,0,0,0.75);
-  color:white;
-
-  border:none;
-  border-radius:12px;
-
-  font-size:24px;
-  font-weight:bold;
-
-  cursor:pointer;
-
-  backdrop-filter:blur(5px);
-
-  box-shadow:
-    0 8px 20px rgba(0,0,0,0.4);
-
-  transition:0.2s;
-}
-
-
-#match-button:hover {
-  background:rgba(0,0,0,0.9);
-  transform:scale(1.05);
-}
-
-
-#matchingText {
-  color:white;
-  font-size:20px;
-  font-weight:bold;
-  text-shadow:
-    0 2px 5px black;
-}
-
-    .logo {
-      font-size: 1.5rem;
-      font-weight: bold;
-      margin: auto;
+      margin: 0;
+      min-height: 100dvh;
+      background: linear-gradient(var(--bg-1), var(--bg-2));
+      color: white;
+      font-family: Segoe UI, Tahoma, Geneva, Verdana, sans-serif;
+      overflow-x: hidden;
     }
 
-    .menu-toggle {
-      display: flex; /* ← PC でも常に表示 */
-      flex-direction: column;
-      cursor: pointer;
-      gap: 4px;
-    }
-
-
-    .menu-toggle div {
-      width: 25px;
-      height: 3px;
-      background-color: #fff;
-    }
-
-    nav {
-      position: absolute;
-      top: 100%;
-      right: 0;
-      background-color: #444;
-      color: #fff;
+    .screen {
       display: none;
-      flex-direction: column;
-      min-width: 150px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      min-height: 100dvh;
     }
 
-    nav a {
-      padding: 0.8rem 1rem;
-      text-decoration: none;
-      color: #fff;
-      border-bottom: 1px solid #555;
-    }
-
-    nav a:hover {
-      background-color: #555;
-    }
-
-    .show-menu nav {
+    .screen.active {
       display: flex;
     }
 
-    h1 {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-      color: #333;
+    /* HOME */
+    #match-home {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
     }
 
-    #status {
-      font-size: 1.2rem;
-      margin-bottom: 1rem;
-      color: #444;
+    .online-title {
+      text-align: center;
+      margin-bottom: 20px;
     }
 
-    table {
+    .online-title .logo {
+      font-size: 24px;
+      color: var(--gold);
+      font-weight: 700;
+      letter-spacing: .4px;
+    }
+
+    .online-title h1 {
+      margin: 12px 0 6px;
+      font-size: 42px;
+      letter-spacing: 3px;
+      color: #fff;
+    }
+
+    .online-title p {
+      margin: 0;
+      font-size: 18px;
+      color: #aaa;
+    }
+
+    .rating-box {
+      width: 100%;
+      max-width: 320px;
+      background: var(--panel);
+      border: 2px solid var(--blue);
+      border-radius: 18px;
+      padding: 18px;
+      text-align: center;
+      margin-bottom: 24px;
+      box-shadow: 0 0 25px rgba(0, 120, 255, .3);
+    }
+
+    .rating-title {
+      color: #6fb8ff;
+      font-size: 18px;
+    }
+
+    #my-rate {
+      margin-top: 8px;
+      font-size: 52px;
+      font-weight: 800;
+    }
+
+    .find-btn {
+      width: 100%;
+      max-width: 320px;
+      height: 72px;
+      border: none;
+      border-radius: 18px;
+      cursor: pointer;
+      background: linear-gradient(#4ca3ff, #1565ff);
+      color: white;
+      font-size: 26px;
+      font-weight: 800;
+      box-shadow: 0 0 30px rgba(0, 100, 255, .45);
+      transition: .2s;
+    }
+
+    .find-btn:active { transform: scale(.96); }
+
+    .find-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .info-box {
+      width: 100%;
+      max-width: 320px;
+      margin-top: 10px;
+      background: var(--panel-2);
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px;
+      font-size: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    .info-row:last-child { border-bottom: none; }
+
+    .info-row span:last-child { color: #fff; font-weight: 700; }
+
+    .back-link {
+      margin-top: 20px;
+      background: none;
+      border: none;
+      color: #64748b;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    /* MATCHING */
+    #matching-screen {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .matching-content {
+      width: 100%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .matching-content h1 {
+      margin: 0;
+      letter-spacing: 2px;
+      font-size: 34px;
+    }
+
+    .player-card {
+      width: 100%;
+      max-width: 320px;
+      border: 2px solid #4aa7ff;
+      border-radius: 22px;
+      background: rgba(255, 255, 255, .05);
+      padding: 16px;
+      margin: 6px 0;
+      text-align: center;
+      box-shadow: 0 0 20px rgba(74, 167, 255, .12);
+    }
+
+    .question {
+      width: 90px;
+      height: 90px;
+      margin: auto;
+      border-radius: 50%;
+      border: 2px solid var(--gold);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 60px;
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    .vs-circle {
+      width: 80px;
+      height: 80px;
+      margin: 10px auto;
+      border-radius: 50%;
+      border: 4px dotted var(--gold);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 34px;
+      font-weight: 800;
+      color: white;
+      animation: spin 8s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    .searching {
+      margin: 4px 0;
+      color: var(--text-dim);
+      font-size: 15px;
+    }
+
+    .cancel {
+      width: 100%;
+      max-width: 320px;
+      margin-top: 8px;
+      padding: 14px;
+      border: none;
+      border-radius: 18px;
+      background: var(--red);
+      color: white;
+      font-size: 20px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .name {
+      margin-top: 10px;
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .rate {
+      margin-top: 6px;
+      color: var(--gold);
+      font-size: 18px;
+    }
+
+    /* GAME */
+    #game-screen {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 12px;
+      gap: 12px;
+    }
+
+    .player-wrapper {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255,255,255,0.05);
+      padding: 10px 16px;
+      border-radius: 15px;
+      border: 1px solid rgba(255,255,255,.08);
+      gap: 12px;
+    }
+
+    .player-info {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .player-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    .player-rate {
+      font-size: 1rem;
+      color: var(--gold);
+    }
+
+    .player-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex: 0 0 auto;
+    }
+
+    .chess-clock {
+      width: 120px;
+      padding: 10px 16px;
+      background: rgba(0,0,0,0.8);
+      color: white;
+      font-size: 28px;
+      font-weight: 800;
+      text-align: center;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      font-family: monospace;
+      flex: 0 0 auto;
+    }
+
+    #board {
       border-collapse: collapse;
       border: 2px solid #222;
       width: var(--board-size);
       height: var(--board-size);
       aspect-ratio: 1 / 1;
       table-layout: fixed;
+      background: #000;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 18px 60px rgba(0,0,0,.45);
     }
 
-    td {
+    #board td {
       width: var(--cell-size);
       height: var(--cell-size);
       position: relative;
       perspective: 1000px;
       padding: 0;
+      overflow: hidden;
     }
 
-    td.white { background-color: var(--white-cell); }
-    td.black { background-color: var(--black-cell); }
-    td.selected { outline: 3px solid yellow; }
+    #board td.white { background-color: var(--white-cell); }
+    #board td.black { background-color: var(--black-cell); }
+    #board td.selected { outline: 3px solid yellow; outline-offset: -3px; }
+
+    #board.flipped {
+      transform: rotate(180deg);
+    }
 
     .dice {
       width: 90%;
@@ -197,6 +372,7 @@
       flex-wrap: wrap;
       justify-content: center;
       align-items: center;
+      backface-visibility: hidden;
     }
 
     .pip {
@@ -237,2524 +413,1263 @@
       border: 1px dashed #000;
     }
 
-    @media (max-width: 768px) {
-      .menu-toggle {
-        display: flex;
-      }
-
-      nav {
-        right: 0;
-        top: 60px;
-      }
-
-      h1 {
-        font-size: 1.5rem;
-      }
-
-      #status {
-        font-size: 1rem;
-      }
-
-      :root {
-        --board-size: 85vw;
-      }
-
-      .pip {
-        width: 4px;
-        height: 4px;
-        margin: 1px;
-      }
-
-      .dice {
-        width: 95%;
-        height: 95%;
-        top: 2.5%;
-        left: 2.5%;
-      }
+    .board-shell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      max-width: 520px;
     }
 
-/* ヘッダー */
-header {
-  height: 60px;
-  background-color: #222;
-  color: white;
-  padding: 0 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: fixed;
-  width: 100%;
-  top: 0;
-  z-index: 1000;
-}
+    .resign-btn {
+      width: 140px;
+      padding: 12px;
+      background: #b33645;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(179, 54, 69, 0.3);
+    }
 
-#back-button {
-  background: none;
-  border: none;
-  color: white;
-  font-size: 16px;
-  margin-right: 16px;
-  cursor: pointer;
-  user-select: none;
-}
+    .resign-btn:active { transform: scale(.97); }
 
-#back-button:active {
-  opacity: 0.6;
-}
+    .status-line {
+      color: #b8c7d9;
+      font-size: 14px;
+      text-align: center;
+      min-height: 20px;
+    }
 
-/* メインエリア：ヘッダーの下に、横並び */
-main#game-container {
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 80px;
-  gap: 2rem;
-  max-width: 100%;
-  flex-wrap: wrap; /* ← これで狭い画面では折り返す */
-  overflow-x: hidden; /* ← 横スクロール防止 */
-  box-sizing: border-box;
-}
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 16px;
+    }
 
+    .hidden { display: none !important; }
 
+    .modal-content {
+      background: #1e293b;
+      color: white;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 320px;
+      border: 2px solid #2d7cff;
+      box-shadow: 0 18px 60px rgba(0,0,0,.5);
+      white-space: pre-line;
+    }
 
-/* 盤面エリア */
-#board-container {
-   flex-shrink: 1;
-  max-width: 100%;
-  min-width: 300px;
-}
+    .modal-content button {
+      margin: 10px 8px 0;
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-weight: 800;
+    }
 
-/* ロボットエリア */
-#robot-area {
-  width: 250px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  max-width: 90vw;
-}
+    .btn-blue { background: #2d7cff; color: white; }
+    .btn-red { background: #b33645; color: white; }
+    .btn-gray { background: #475569; color: white; }
 
-#robot-avatar {
-  width: 60px;
-  height: auto;
-}
+    .menu-toggle {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      gap: 4px;
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      opacity: 0;
+      pointer-events: none;
+    }
 
-#robot-bubble {
-  background-color: #fff;
-  border: 2px solid #888;
-  border-radius: 16px;
-  padding: 10px 14px;
-  max-width: 200px;
-  font-size: 14px;
-  position: relative;
-  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-#robot-bubble::after {
-  content: "";
-  position: absolute;
-  left: -10px;
-  top: 10px;
-  width: 0;
-  height: 0;
-  border: 10px solid transparent;
-  border-right-color: #fff;
-}
-
-/* スマホ表示時のスタイル */
-@media (max-width: 768px) {
-  main#game-container {
-    flex-direction: column;
-    align-items: center;
-    padding-top: 80px;
-  }
-
-  #board-container {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-  }
-
-  #robot-area {
-    order: -1; /* ← 上に表示させる */
-    width: 100%;
-    margin-bottom: 1rem;
-    align-items: center;
-  }
-
-  #robot-bubble::after {
-    top: -10px;
-    left: 20px;
-    border: 10px solid transparent;
-    border-bottom-color: #fff;
-    border-right-color: transparent;
-  }
-}
-
-#opponent-wrapper,
-#player-wrapper {
-  width: 100%;
-  display: flex;
-  justify-content: center; /* 全体を中央寄せ */
-  align-items: center; /* 垂直中央揃え */
-  margin-bottom: 0px;
-  background-color: #000;
-  gap: 12px; /* アイコンとテキスト間の余白 */
-}
-
-.player-icon {
-  width: 40px;  /* アイコンのサイズ調整 */
-  height: 40px;
-  border-radius: 50%; /* 丸くする場合 */
-  object-fit: cover;
-}
-
-.player-info {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px; /* 名前とレートの間 */
-  background-color: #000;
-  padding: 6px 12px;
-  border-radius: 10px;
-  box-shadow: 1px 1px 4px rgba(0,0,0,0.1);
-  color: #ffffff;
-  font-weight: bold;
-  font-size: 1.2rem;
-}
-
-.player-name {
-  /* 名前部分のスタイル */
-}
-
-.player-rate {
-  /* レート部分のスタイル */
-  color: #ffffff;
-  font-size: 1rem;
-}
-
-/* スマホ時（768px以下）にボードの上に来るように */
-@media (max-width: 768px) {
-  #game-container {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  #board-container {
-    order: 1;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-}
-
-
-
-#room-list-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: auto;
-  margin-top: 10vh;
-}
-
-.room-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  justify-content: center;
-}
-
-
-.room-card {
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  padding: 16px;
-  background: #f9f9f9;
-  transition: box-shadow 0.2s, transform 0.2s;
-  cursor: pointer;
-}
-
-/* 例: ホスト名がある場合は薄緑、ない場合はグレー背景 */
-.room-card.host-known {
-  background-color: #61ff9e;
-}
-
-.room-card.host-unknown {
-  background-color: #f0f0f0;
-}
-
-
-
-.room-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: scale(1.02);
-  background-color: #eef;
-}
-
-.room-id {
-  font-weight: bold;
-  font-size: 1.1em;
-  margin-bottom: 8px;
-}
-
-.room-host {
-  color: #555;
-}
-
-#board-container{
-  display:none;
-}
-
-#robot-area{
-  display:none;
-}
-
-  .modal {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .modal.hidden {
-    display: none;
-  }
-
-  .modal-content {
-    background: #fff;
-    color: #000;
-    padding: 20px 30px;
-    border-radius: 12px;
-    text-align: center;
-    max-width: 80%;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-  }
-
-  .modal-content button {
-    margin-top: 20px;
-    padding: 8px 16px;
-    font-size: 1rem;
-    border: none;
-    background: #4285F4;
-    color: white;
-    border-radius: 8px;
-    cursor: pointer;
-  }
-
-  .modal-content button:hover {
-    background: #3367d6;
-  }
-  
-  .chess-clock {
-  width: 120px;
-  padding: 10px 20px;
-
-  background: rgba(0,0,0,0.8);
-  color:white;
-
-  font-size:28px;
-  font-weight:bold;
-
-  text-align:center;
-
-  border-radius:8px;
-
-  margin:10px auto;
-
-  box-shadow:0 4px 10px rgba(0,0,0,0.5);
-}
-
-#resign-button {
-
-  margin-top:15px;
-
-  width:140px;
-  padding:10px;
-
-  background:#222;
-  color:white;
-
-  border:none;
-  border-radius:8px;
-
-  font-size:18px;
-  font-weight:bold;
-
-  cursor:pointer;
-}
-
-
-#resign-button:hover{
-  background:#555;
-}  
-#resign-modal .modal-content button{
-  margin: 10px 8px 0;
-  min-width: 90px;
-}
+    @media (max-width: 480px) {
+      .online-title h1 { font-size: 30px; }
+      #my-rate { font-size: 42px; }
+      .find-btn { height: 62px; font-size: 22px; }
+      .chess-clock { width: 104px; font-size: 24px; padding: 8px 12px; }
+      #board { width: min(88vmin, 380px); height: min(88vmin, 380px); }
+      .pip { width: 4px; height: 4px; margin: 1px; }
+      .dice { width: 95%; height: 95%; top: 2.5%; left: 2.5%; }
+      .player-wrapper { padding: 8px 12px; }
+    }
   </style>
 </head>
 <body>
-
-
-  <header>
-    <button id="back-button" aria-label="戻る">&larr;</button>
-    <div class="logo">🎲 DiceChess</div>
-    <div class="menu-toggle" onclick="document.body.classList.toggle('show-menu')">
-      <div></div><div></div><div></div>
+  <div id="match-home" class="screen active">
+    <div class="online-title">
+      <div class="logo">🎲 DiceChess</div>
+      <h1>ONLINE MATCH</h1>
+      <p>Play against players around the world.</p>
     </div>
-    <nav>
-      <a href="./index.html">Home</a>
-      <a href="./bot.html">Bot対戦</a>
-      <a href="./tutorial.html">ルール</a>
-      <a href="./login.html">オンライン対戦</a>
-      <a href="./ranking.html">ランキング</a>
-      <a href="./tsumeshogi.html">詰将棋</a>
-    </nav>
-  </header>
-  
-  <div class="match-container">
-  <button id="match-button">
-🕑️10-minute game (loss on time)
-</button>
-  <div id="matchingText"></div>
-</div>
 
-  <!--  <div id="room-list-container">
-  <h2 style="color: white; text-align: center;">参加可能な部屋</h2>
-  <div id="room-list" class="room-grid"></div>
-</div>
--->
+    <div class="rating-box">
+      <div class="rating-title">🏆 YOUR RATING</div>
+      <div id="my-rate">1200</div>
+    </div>
 
-  <main id="game-container">
+    <button id="match-button" class="find-btn">▶ FIND MATCH</button>
 
-<div id="board-container">
+    <div class="info-box">
+      <div class="info-row"><span>⏱ Time</span><span>10 min</span></div>
+      <div class="info-row"><span>🌍 Online</span><span id="online-count">124</span></div>
+      <div class="info-row"><span>⌛ Wait</span><span>&lt;10 sec</span></div>
+    </div>
 
-
-
-<div id="opponent-wrapper">
-    <div id="opponent-clock" class="chess-clock">
-10:00
-</div>
-  <img src="./blank-profile-picture-973460_640.png" alt="Opponent Icon" class="player-icon" />
-  <div class="player-info">
-    <span class="player-name" id="opponentName">???</span>
-    <span class="player-rate" id="opponentRate">???</span>
+    <button id="back-button" class="back-link">← BACK</button>
   </div>
-</div>
-    <table id="board">
-        
-    </table>
-    <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
-    <div id="player-wrapper">
-        <div id="player-clock" class="chess-clock">
-10:00
-</div>
-  <img src="./blank-profile-picture-973460_640.png" alt="Player Icon" class="player-icon" />
-  <div class="player-info">
-    <span class="player-name" id="playerName">???</span>
-    <span class="player-rate" id="playerRate">???</span>
+
+  <div id="matching-screen" class="screen">
+    <div class="matching-content">
+      <h1>MATCHING</h1>
+      <p>Finding the perfect opponent...</p>
+
+      <div class="player-card you">
+        <div class="name" id="matching-playerName">YOU</div>
+        <div class="rate" id="matching-playerRate">1200</div>
+      </div>
+
+      <div class="vs-circle">VS</div>
+
+      <p class="searching" id="matching-text">Searching for player around your rating...</p>
+
+      <div class="player-card opponent">
+        <div class="question">?</div>
+        <div class="name" id="matching-opponentName">???</div>
+        <div class="rate" id="matching-opponentRate">????</div>
+      </div>
+
+      <button class="cancel" id="cancel-match">✕ CANCEL</button>
+    </div>
   </div>
-</div>
- <button id="resign-button">
-🏳️ resign
-</button>
-<div id="resign-modal" class="modal hidden">
-  <div class="modal-content">
-    <p>投了しますか？</p>
-    <button id="resign-yes">はい</button>
-    <button id="resign-no">いいえ</button>
+
+  <div id="game-screen" class="screen">
+    <div class="player-wrapper">
+      <div class="player-info">
+        <span class="player-name" id="opponentName">???</span>
+        <span class="player-rate" id="opponentRate">???</span>
+      </div>
+      <img src="./blank-profile-picture-973460_640.png" alt="Opponent Icon" class="player-icon" />
+      <div id="opponent-clock" class="chess-clock">10:00</div>
+    </div>
+
+    <div class="board-shell">
+      <table id="board" aria-label="DiceChess board"></table>
+      <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
+      <div id="game-status" class="status-line"></div>
+      <button id="resign-button" class="resign-btn">🏳️ resign</button>
+    </div>
+
+    <div class="player-wrapper">
+      <div class="player-info">
+        <span class="player-name" id="playerName">???</span>
+        <span class="player-rate" id="playerRate">???</span>
+      </div>
+      <img src="./blank-profile-picture-973460_640.png" alt="Player Icon" class="player-icon" />
+      <div id="player-clock" class="chess-clock">10:00</div>
+    </div>
   </div>
-</div>
+
+  <div id="resign-modal" class="modal hidden">
+    <div class="modal-content">
+      <p>投了しますか？</p>
+      <button id="resign-yes" class="btn-red">はい</button>
+      <button id="resign-no" class="btn-gray">いいえ</button>
+    </div>
   </div>
-<!--  
-  <div id="robot-area">
-    <img src="./waving-287_256.gif" alt="Bot" id="robot-avatar" />
-    <div id="robot-bubble">こんにちは！ゲームを始めましょう！</div>
+
+  <div id="custom-modal" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <button id="modal-ok" class="btn-blue">OK</button>
+    </div>
   </div>
-  -->
-</main>
 
-<!-- モーダル HTML -->
-<div id="custom-modal" class="modal hidden">
-  <div class="modal-content">
-    <p id="modal-message"></p>
-    <button onclick="closeModal()">OK</button>
-  </div>
-</div>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDPN3x-mLFWOPzCo3X7pw91jNviJK9o9iM",
+      authDomain: "dicechessapp-f1aae.firebaseapp.com",
+      databaseURL: "https://dicechessapp-f1aae-default-rtdb.firebaseio.com",
+      projectId: "dicechessapp-f1aae",
+      storageBucket: "dicechessapp-f1aae.firebasestorage.app",
+      messagingSenderId: "95867369126",
+      appId: "1:95867369126:web:c48908ee53f03027fca667",
+      measurementId: "G-Z4Z2HS0GMX"
+    };
 
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const db2 = firebase.firestore();
 
- <!-- Firebase SDK v8系 -->
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    const params = new URLSearchParams(location.search);
+    let myname = params.get("myname") || `Guest_${Math.floor(Math.random() * 1000)}`;
+    let roomid = null;
+    let roomUnsub = null;
+    let leavingRoom = false;
+    let moveListener = null;
+    let isMatched = false;
+    let isCancelRequested = false;
+    let matchTimer = null;
+    let reverseColor = false;
+    let finishedHandled = false;
+    let room = null;
+    let myRateLoaded = 1200;
+    let matchmakingPollTimer = null;
+    let currentPlayer = "white";
+    let myColor = "white";
+    let gameStarted = false;
+    const SIZE = 8;
+    const state = [];
+    let selected = null;
+    let ghostMoves = [];
 
-<script>
-    
+    const board = document.getElementById("board");
 
-setInterval(async () => {
+    const diceRotations = {
+      1: 'rotateX(0deg) rotateY(0deg)',
+      2: 'rotateX(-90deg) rotateY(0deg)',
+      3: 'rotateY(-90deg)',
+      4: 'rotateY(90deg)',
+      5: 'rotateX(90deg) rotateY(0deg)',
+      6: 'rotateX(180deg) rotateY(0deg)'
+    };
 
-  if (!roomid) return;
+    const pipsMap = {
+      1: [4],
+      2: [0, 8],
+      3: [0, 4, 8],
+      4: [0, 2, 6, 8],
+      5: [0, 2, 4, 6, 8],
+      6: [0, 2, 3, 5, 6, 8]
+    };
 
-
-  const roomRef = firebase.database()
-    .ref("rooms/" + roomid);
-
-
-  const snap = await roomRef.once("value");
-
-  const room = snap.val();
-
-  if (!room) return;
-
-
-
-  let white = room.timeWhite;
-  let black = room.timeBlack;
-
-
-
- // 開始前
-  if(room.lastMoveTime === 0){
-  
-
-    document.getElementById("player-clock").innerHTML =
-format(white);
-
-document.getElementById("opponent-clock").innerHTML =
-format(black);
-
-    return;
-
-  }
-
-
-
-  // 現在手番の経過時間
-  const elapsed =
-    (Date.now() - room.lastMoveTime) / 1000;
-
-
-
-  if(room.turn === room.name){
-
-    white -= elapsed;
-
-  }else if(room.turn === room.opponent){
-
-    black -= elapsed;
-
-  }
-
-
-
-  if(white < 0) white = 0;
-  if(black < 0) black = 0;
-
-
-
-  function format(t){
-
-    let m = Math.floor(t / 60);
-    let s = Math.floor(t % 60);
-
-    return `${m}:${s.toString().padStart(2,"0")}`;
-
-  }
-
-
-
-  // 時計表示
-  document.getElementById("player-clock").innerHTML =
-format(white);
-
-document.getElementById("opponent-clock").innerHTML =
-format(black);
-
-
-
-
-  // ==========================
-  // 時間切れ判定
-  // ==========================
-
-  if(
-    (white <= 0 || black <= 0)
-    &&
-    room.status !== "finished"
-  ){
-
-
-    let loser;
-    let winner;
-
-
-
-    if(white <= 0){
-
-      loser = room.name;
-      winner = room.opponent;
-
+    function switchScreen(id) {
+      document.querySelectorAll(".screen").forEach(el => el.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
     }
 
-
-    if(black <= 0){
-
-      loser = room.opponent;
-      winner = room.name;
-
+    function formatTime(t) {
+      t = Math.max(0, Math.floor(t));
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60);
+      return `${m}:${String(s).padStart(2, "0")}`;
     }
 
-
-
-    if(!winner || !loser){
-      return;
+    function showStatus(text) {
+      document.getElementById("game-status").textContent = text || "";
     }
 
-
-
-    console.log(
-      "時間切れ",
-      loser,
-      "負け",
-      winner,
-      "勝ち"
-    );
-
-
-
-    await roomRef.update({
-
-      winner:winner,
-      loser:loser,
-      status:"finished"
-
-    });
-
-
-
-    return;
-
-  }
-
-
-
-
-
-  // ==========================
-  // 結果後のレート更新
-  // ==========================
-
-  if(
-    room.status === "finished"
-    &&
-    room.winner
-    &&
-    room.loser
-  ){
-
-const rateKey = "rateUpdated_" + roomid + "_" + myname;
-
-if(localStorage.getItem(rateKey)){
-  return;
-}
-
-
-
-    if(
-      myname !== room.winner
-      &&
-      myname !== room.loser
-    ){
-      return;
+    function applyPerspective(room) {
+      if (!room || isCancelRequested) return;
+      myColor = room.name === myname ? "white" : "black";
+      currentPlayer = myColor;
+      board.classList.toggle("flipped", myColor === "black");
     }
 
-
-
-    
-
-
-    const opponentName =
-      myname === room.winner
-      ? room.loser
-      : room.winner;
-
-
-
-    const mySnap = await db2.collection("users")
-      .where("name","==",myname)
-      .get();
-
-
-
-    const oppSnap = await db2.collection("users")
-      .where("name","==",opponentName)
-      .get();
-
-
-
-    if(mySnap.empty || oppSnap.empty){
-      return;
+    function showModal(message) {
+      document.getElementById("modal-message").innerText = message;
+      document.getElementById("custom-modal").classList.remove("hidden");
     }
 
-
-
-    const myDoc = mySnap.docs[0];
-    const oppDoc = oppSnap.docs[0];
-
-
-
-    const myRate =
-      myDoc.data().rate || 1500;
-
-
-    const oppRate =
-      oppDoc.data().rate || 1500;
-
-
-
-    let newRate;
-
-
-
-    if(myname === room.winner){
-
-
-      newRate = calculateEloRating(
-        myRate,
-        oppRate,
-        1
-      );
-
-
-      showModal(
-        `時間切れ勝利\nレート ${myRate} → ${newRate}`
-      );
-
-
-    }else{
-
-
-      newRate = calculateEloRating(
-        myRate,
-        oppRate,
-        0
-      );
-
-
-      showModal(
-        `時間切れ負け\nレート ${myRate} → ${newRate}`
-      );
-
+    function closeModal() {
+      document.getElementById("custom-modal").classList.add("hidden");
+      location.href = "./online.html?myname=" + encodeURIComponent(myname);
     }
 
-localStorage.setItem(rateKey, "true");
+    document.getElementById("modal-ok").onclick = closeModal;
 
-    await myDoc.ref.update({
+    function clearMatchTimers() {
+      if (matchTimer) {
+        clearTimeout(matchTimer);
+        matchTimer = null;
+      }
+      if (matchmakingPollTimer) {
+        clearInterval(matchmakingPollTimer);
+        matchmakingPollTimer = null;
+      }
+    }
 
-      rate:newRate
+    function stopRoomListeners() {
+      if (roomUnsub) {
+        roomUnsub.off();
+        roomUnsub = null;
+      }
+      if (moveListener) {
+        moveListener.off();
+        moveListener = null;
+      }
+    }
 
-    });
-    
-    
+    async function leaveRoomAndGoHome() {
+      if (leavingRoom) return;
+      leavingRoom = true;
+      isCancelRequested = true;
+      clearMatchTimers();
+      stopRoomListeners();
 
+      const currentRoomId = roomid;
+      roomid = null;
+      room = null;
+      finishedHandled = false;
+      selected = null;
+      ghostMoves = [];
 
-
-  }
-
-
-},1000);
-
-
-document.getElementById("resign-button").onclick = function () {
-  document.getElementById("resign-modal").classList.remove("hidden");
-};
-
-document.getElementById("resign-no").onclick = function () {
-  document.getElementById("resign-modal").classList.add("hidden");
-};
-
-document.getElementById("resign-yes").onclick = async function () {
-
-  document.getElementById("resign-modal").classList.add("hidden");
-
-  if (!roomid) return;
-
-  const snap = await firebase.database()
-    .ref("rooms/" + roomid)
-    .once("value");
-
-  const room = snap.val();
-
-  if (!room) {
-    console.error("roomがありません");
-    return;
-  }
-
-  const winner =
-    room.name === myname
-      ? room.opponent
-      : room.name;
-
-  await firebase.database()
-    .ref("rooms/" + roomid)
-    .update({
-      winner: winner,
-      loser: myname,
-      status: "finished"
-    });
-};
-
-  function showModal(message) {
-    document.getElementById("modal-message").innerText = message;
-    document.getElementById("custom-modal").classList.remove("hidden");
-  }
-
-  function closeModal() { document.getElementById("custom-modal").classList.add("hidden");
-  
-  location.href =
-    "./online.html?myname=" + encodeURIComponent(myname);
-
-  }
-
-  document.getElementById('back-button').addEventListener('click', () => {
-  window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
-});
-
-const firebaseConfig = {
-    apiKey: "AIzaSyDPN3x-mLFWOPzCo3X7pw91jNviJK9o9iM",
-    authDomain: "dicechessapp-f1aae.firebaseapp.com",
-    databaseURL: "https://dicechessapp-f1aae-default-rtdb.firebaseio.com",
-    projectId: "dicechessapp-f1aae",
-    storageBucket: "dicechessapp-f1aae.firebasestorage.app",
-    messagingSenderId: "95867369126",
-    appId: "1:95867369126:web:c48908ee53f03027fca667",
-    measurementId: "G-Z4Z2HS0GMX"
-  };
-
-
-  // Firebase 初期化
-  const app = firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
-  const db2 = firebase.firestore();
-
-
-
-function calculateEloRating(Ra, Rb, result, K=32) {
-  const Ea = 1 / (1 + Math.pow(10, (Rb - Ra) / 400));
-  const newRa = Ra + K * (result - Ea);
-  return Math.round(newRa);
-}
-
-
-function updateUserRate(userName, opponentRate, gameResult) {
-  db2.collection("users")
-    .where("name", "==", userName)
-    .get()
-    .then((querySnapshot) => {
-      if (querySnapshot.empty) {
-        console.error("ユーザーが見つかりません");
-        return;
+      if (currentRoomId) {
+        try {
+          await db.ref("rooms/" + currentRoomId).remove();
+        } catch (e) {}
       }
 
-      querySnapshot.forEach((doc) => {
-        const currentRate = doc.data().rate || 1500;
-        const newRate = calculateEloRating(currentRate, opponentRate, gameResult);
-
-        doc.ref.update({ rate: newRate })
-          .then(() => {
-           showModal(`ユーザー ${userName} のレートを ${currentRate} → ${newRate} に更新しました`);
-          })
-          .catch((err) => {
-            showmodal("レート更新失敗:", err);
-          });
-      });
-    })
-    .catch((err) => {
-      console.error("ユーザー取得失敗:", err);
-    });
-}
-
-
-function reportVictory() {
-  firebase.database().ref("rooms/" + roomid).update({
-    winner: myname,
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-  .then(() => {
-    console.log("勝利報告が完了しました");
-  })
-  .catch((err) => {
-    console.error("勝利報告に失敗:", err);
-  });
-}
-
-
-function getRate(opponentName){
-
-  const myName = params.get('myname');
-  //const myName = "test";
-  
-  Promise.all([
-    db2.collection("users").where("name", "==", myName).get(),
-    db2.collection("users").where("name", "==", opponentName).get()
-  ]).then(([mySnap, oppSnap]) => {
-    if (mySnap.empty || oppSnap.empty) {
-      console.error("ユーザーが見つかりません");
-      return;
+      location.href = "./online.html?myname=" + encodeURIComponent(myname);
     }
 
-    const myDoc = mySnap.docs[0];
-    const oppDoc = oppSnap.docs[0];
-
-    const myRate = myDoc.data().rate || 1500;
-    const oppRate = oppDoc.data().rate || 1500;
-
-    document.getElementById("playerRate").innerHTML = myRate;
-    document.getElementById("playerName").innerHTML = myName;
-    document.getElementById("opponentRate").innerHTML = oppRate;
-
-  }).catch((error) => {
-    console.error("Firestore読み込みエラー:", error);
-  });
-}
-
-
-function listenForLosses() {
-  const resultsRef = firebase.database().ref("rooms/" + roomid);
-
-  resultsRef.on("value", (snapshot) => {
-    const data = snapshot.val();
-    if (!data || !data.winner || data.winner === myname) return;
-
-    console.log("You lost. Calculating new rating...");
-
-    // 相手の名前がわかっている前提（room.opponent）
-    const opponentName = data.winner; // 勝者＝相手
-    if (!opponentName) {
-      console.error("opponent name missing");
-      return;
+    function calculateEloRating(Ra, Rb, result, K = 32) {
+      const Ea = 1 / (1 + Math.pow(10, (Rb - Ra) / 400));
+      return Math.round(Ra + K * (result - Ea));
     }
 
-    // 自分と相手のレートを Firestore から取得
-    Promise.all([
-      db2.collection("users").where("name", "==", myname).get(),
-      db2.collection("users").where("name", "==", opponentName).get()
-    ]).then(([mySnap, oppSnap]) => {
-      if (mySnap.empty || oppSnap.empty) {
-        console.error("ユーザーが見つかりません");
-        return;
+    function createPiece(top, color, player, isKing = false) {
+      let die;
+      switch (top) {
+        case 1: die = { top: 1, bottom: 6, left: 4, right: 3, front: 2, back: 5 }; break;
+        case 2: die = { top: 2, bottom: 5, left: 4, right: 3, front: 6, back: 1 }; break;
+        case 3: die = { top: 3, bottom: 4, left: 6, right: 1, front: 2, back: 5 }; break;
+        case 4: die = { top: 4, bottom: 3, left: 1, right: 6, front: 2, back: 5 }; break;
+        case 5: die = { top: 5, bottom: 2, left: 4, right: 3, front: 1, back: 6 }; break;
+        case 6: die = { top: 6, bottom: 1, left: 4, right: 3, front: 5, back: 2 }; break;
+        default: throw new Error("Invalid top value");
+      }
+      if (player === "black") {
+        [die.left, die.right] = [die.right, die.left];
+        [die.front, die.back] = [die.back, die.front];
+      }
+      return { ...die, color, player, isKing };
+    }
+
+    function playDiceRollSound() {
+      const audio = document.getElementById("dice-roll-sound");
+      if (audio) {
+        audio.currentTime = 0;
+        audio.play().catch(() => {});
+      }
+    }
+
+    function rollDie(die, direction) {
+      const d = { ...die };
+      switch (direction) {
+        case "up":
+          d.top = die.back; d.bottom = die.front; d.front = die.top; d.back = die.bottom; break;
+        case "down":
+          d.top = die.front; d.bottom = die.back; d.front = die.bottom; d.back = die.top; break;
+        case "left":
+          d.top = die.right; d.bottom = die.left; d.left = die.top; d.right = die.bottom; break;
+        case "right":
+          d.top = die.left; d.bottom = die.right; d.left = die.bottom; d.right = die.top; break;
+      }
+      return d;
+    }
+
+    function moveDie(originalDie, dx, dy) {
+      let die = { ...originalDie };
+      const step = (dir, count) => { for (let i = 0; i < count; i++) die = rollDie(die, dir); };
+      if (dy < 0) step("up", -dy);
+      else if (dy > 0) step("down", dy);
+      if (dx < 0) step("left", -dx);
+      else if (dx > 0) step("right", dx);
+      return die;
+    }
+
+    function setupBoard() {
+      board.innerHTML = "";
+      state.length = 0;
+      for (let r = 0; r < SIZE; r++) {
+        const row = [];
+        const tr = document.createElement("tr");
+        for (let c = 0; c < SIZE; c++) {
+          const td = document.createElement("td");
+          td.dataset.row = r;
+          td.dataset.col = c;
+          td.className = (r + c) % 2 === 0 ? "white" : "black";
+          td.addEventListener("click", onCellClick);
+          tr.appendChild(td);
+          row.push(null);
+        }
+        board.appendChild(tr);
+        state.push(row);
       }
 
-      const myDoc = mySnap.docs[0];
-      const oppDoc = oppSnap.docs[0];
+      const backRank = [5, 3, 3, 6, 2, 3, 3, 5];
+      const reversedBackRank = [...backRank].reverse();
 
-      const myRate = myDoc.data().rate || 1500;
-      const oppRate = oppDoc.data().rate || 1500;
-
-      const newMyRate = calculateEloRating(myRate, oppRate, 0); // 敗北なので result = 0
-
-      myDoc.ref.update({ rate: newMyRate }).then(() => {
-        showModal(`あなたのレート: ${myRate} → ${newMyRate}`);
-        firebase.database().ref("rooms/" + roomid).update({
-    winner: "",
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-        setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 3000); // 1000ミリ秒 = 1秒
-      });
-
-    }).catch(err => {
-      console.error("レート取得エラー", err);
-    });
-  });
-}
-
-function winnerrateupdate(){
-let opponentName = document.getElementById("opponentName").textContent;
-console.log(opponentName);
-const resultsRef = firebase.database().ref("rooms/" + roomid);
-  resultsRef.on("value", (snapshot) => {
-
-    // 自分と相手のレートを Firestore から取得
-    Promise.all([
-      db2.collection("users").where("name", "==", myname).get(),
-      db2.collection("users").where("name", "==", opponentName).get()
-    ]).then(([mySnap, oppSnap]) => {
-      if (mySnap.empty || oppSnap.empty) {
-        console.error("ユーザーが見つかりません");
-        return;
+      for (let i = 0; i < SIZE; i++) {
+        state[7][i] = createPiece(backRank[i], "", "white", backRank[i] === 2);
+        state[6][i] = createPiece(1, "", "white");
+        state[0][i] = createPiece(reversedBackRank[i], "", "black", reversedBackRank[i] === 2);
+        state[1][i] = createPiece(1, "", "black");
       }
-
-      const myDoc = mySnap.docs[0];
-      const oppDoc = oppSnap.docs[0];
-
-      const myRate = myDoc.data().rate || 1500;
-      const oppRate = oppDoc.data().rate || 1500;
-
-      const newMyRate = calculateEloRating(myRate, oppRate, 1);
-
-      myDoc.ref.update({ rate: newMyRate }).then(() => {
-        showModal(`あなたのレート: ${myRate} → ${newMyRate}`);
-      });
-
-    }).catch(err => {
-      console.error("レート取得エラー", err);
-    });
-  });
-}
-
-
-document.getElementById("match-button")
-.addEventListener("click", async()=>{
-
- const button = document.getElementById("match-button");
-
-  // 連打防止
-  button.disabled = true;
-  button.style.opacity = "0.5";
-  button.style.cursor = "not-allowed";
-
-
-  const room = await getRandomWaitingRoom();
-
-  if(room){
-
-    console.log("参加する部屋:", room.id);
-
-    await getOpponentName(room.id,myname);
-
-    listenForOpponentMove(myname,room.id);
-
-  }else{
-
-    console.log("空き部屋なし、新規作成");
-
-    const newRoomRef = db.ref("rooms").push();
-
-    
-    await newRoomRef.set({
-  name: myname,
-  opponent:"",
-  status:"waiting",
-  turn:myname,
-  moves:"",
-  winner:"",
-
-  timeWhite:600,
-  timeBlack:600,  
-lastMoveTime:0,
-  timeOverProcessed:false
-});
-
-    roomid = newRoomRef.key;
-    
-
-    updateRobotMessage(
-      "対戦相手を探しています..."
-    );
-
-    listenForEntry(myname,roomid);
-
-    startMatchingTimer();
-
-  }
-
-});
-
-let matchTimer = null;
-let isMatched = false;
-
-
-// 待機開始
-function startMatchingTimer(){
-
-document.getElementById("matchingText").innerHTML ="Matching... The match against the bot will start in 30 seconds.";
-
-
-  matchTimer = setTimeout(()=>{
-
-    if(!isMatched){
-
-      console.log("マッチング失敗 → Bot戦へ");
-
-      startBotMatch();
-
+      render();
     }
 
-  }, 30000); //30秒待つ
+    function createDiceElement(piece, isGhost = false) {
+      const wrapper = document.createElement("div");
+      const dice = document.createElement("div");
+      dice.className = "dice" + (piece.isKing ? " king" : "");
+      dice.style.transform = diceRotations[piece.top];
+      if (isGhost) {
+        wrapper.className = "ghost-wrapper";
+        dice.classList.add("ghost-dice");
+      }
 
-}
+      ["front", "back", "right", "left", "top", "bottom"].forEach((side) => {
+        const face = document.createElement("div");
+        face.className = `face ${side}`;
 
+        if (piece.isKing) {
+          face.style.background = reverseColor
+            ? (piece.player === "white" ? "#06c" : "#c00")
+            : (piece.player === "white" ? "#c00" : "#06c");
+        } else {
+          let diceColor = piece.player === "white" ? "#fff" : "#222";
+          if (reverseColor) diceColor = piece.player === "white" ? "#222" : "#fff";
+          face.style.background = diceColor;
+        }
 
-// 相手が来た時
-function matched(){
+        const faceNumberMap = { front: 1, back: 6, right: 3, left: 4, top: 2, bottom: 5 };
+        const faceNum = faceNumberMap[side];
+        pipsMap[faceNum].forEach(() => {
+          const pip = document.createElement("div");
+          pip.className = "pip";
+          pip.style.backgroundColor = reverseColor
+            ? (piece.player === "white" ? "#fff" : "#000")
+            : (piece.player === "white" ? "#000" : "#fff");
+          face.appendChild(pip);
+        });
+        dice.appendChild(face);
+      });
 
-  isMatched = true;
+      if (isGhost) {
+        wrapper.appendChild(dice);
+        return wrapper;
+      }
+      return dice;
+    }
 
-  if(matchTimer){
-    clearTimeout(matchTimer);
-  }
-  
-document.getElementById("matchingText").style.display = "none";
+    function render() {
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const td = board.rows[r].cells[c];
+          td.classList.remove("selected");
+          td.innerHTML = "";
+          const piece = state[r][c];
+          if (piece) td.appendChild(createDiceElement(piece));
+        }
+      }
 
-document.getElementById("match-button").style.display = "none";
+      ghostMoves.forEach(({ r, c, piece }) => {
+        const td = board.rows[r].cells[c];
+        td.appendChild(createDiceElement(piece, true));
+      });
 
-//document.getElementById("clock").style.display = "block";
-}
+      if (selected) {
+        const [sr, sc] = selected;
+        const td = board.rows[sr].cells[sc];
+        if (td) td.classList.add("selected");
+      }
+    }
 
-function startBotMatch(){
+    function getGhostMoves(piece, sr, sc) {
+      if (!piece) return [];
+      const moves = [];
+      const directions = [
+        { dr: -1, dc: 0 },
+        { dr: 1, dc: 0 },
+        { dr: 0, dc: -1 },
+        { dr: 0, dc: 1 }
+      ];
+      directions.forEach(({ dr, dc }) => {
+        for (let i = 1; i <= piece.top; i++) {
+          const r = sr + dr * i;
+          const c = sc + dc * i;
+          if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) break;
+          const target = state[r][c];
+          const newDie = moveDie(piece, dc * i, dr * i);
+          if (target) {
+            if (target.player === piece.player) break;
+            if (piece.top < target.top) moves.push({ r, c, piece: { ...piece, ...newDie } });
+            break;
+          } else {
+            moves.push({ r, c, piece: { ...piece, ...newDie } });
+          }
+        }
+      });
+      return moves;
+    }
 
-  // Firebase部屋解除
-  if(roomid){
+    function hasBlockingPiece(sr, sc, er, ec, boardState) {
+      const dr = Math.sign(er - sr);
+      const dc = Math.sign(ec - sc);
+      let r = sr + dr;
+      let c = sc + dc;
+      while (r !== er || c !== ec) {
+        if (boardState[r][c]) return true;
+        r += dr;
+        c += dc;
+      }
+      return false;
+    }
 
-    firebase.database()
-    .ref("rooms/"+roomid)
-    .update({
-      name:"",
-      opponent:"",
-      status:"waiting",
-      turn:"",
-      moves:"",
-      winner:""
-    });
+    function getBlockingPosition(sr, sc, dr, dc, boardState) {
+      let r = sr + dr;
+      let c = sc + dc;
+      while (r >= 0 && r < 8 && c >= 0 && c < 8) {
+        if (boardState[r][c]) return [r, c];
+        r += dr;
+        c += dc;
+      }
+      return [null, null];
+    }
 
-  }
+    function generateMoves(player, boardState) {
+      const moves = [];
+      for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+          const piece = boardState[r][c];
+          if (!piece || piece.player !== player) continue;
+          const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
+          for (const [dr, dc] of dirs) {
+            for (let dist = 1; dist <= piece.top; dist++) {
+              const nr = r + dr * dist;
+              const nc = c + dc * dist;
+              if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) break;
+              const target = boardState[nr][nc];
+              if (hasBlockingPiece(r, c, nr, nc, boardState)) {
+                const [br, bc] = getBlockingPosition(r, c, dr, dc, boardState);
+                const blocking = boardState[br][bc];
+                if (blocking && blocking.player !== player && piece.top < blocking.top) {
+                  moves.push({ from: [r, c], to: [br, bc] });
+                }
+                break;
+              }
+              if (target) {
+                if (target.player === player) break;
+                if (piece.top < target.top) moves.push({ from: [r, c], to: [nr, nc] });
+                break;
+              }
+              moves.push({ from: [r, c], to: [nr, nc] });
+            }
+          }
+        }
+      }
+      return moves;
+    }
 
+    function applyMove(boardState, move) {
+      const [fr, fc] = move.from;
+      const [tr, tc] = move.to;
+      const piece = boardState[fr][fc];
+      const dx = tc - fc;
+      const dy = tr - fr;
+      const newDie = moveDie(piece, dx, dy);
+      boardState[tr][tc] = { ...piece, ...newDie };
+      boardState[fr][fc] = null;
+      return boardState;
+    }
 
-  // オンラインUIをBot用に変更
+    function cloneBoard(boardState) {
+      return boardState.map(row => row.map(cell => cell ? { ...cell } : null));
+    }
 
-  document.getElementById("opponentName")
-  .textContent="Diceman Bot";
+    function isInCheckAfterMove(color, boardState) {
+      let kingPosition = null;
+      for (let row = 0; row < 8; row++) {
+        for (let col = 0; col < 8; col++) {
+          const piece = boardState[row][col];
+          if (piece && piece.player === color && piece.isKing) {
+            kingPosition = { row, col };
+            break;
+          }
+        }
+        if (kingPosition) break;
+      }
+      if (!kingPosition) return true;
+      const opponent = color === "white" ? "black" : "white";
+      const oppMoves = generateMoves(opponent, boardState);
+      return oppMoves.some(move => move.to[0] === kingPosition.row && move.to[1] === kingPosition.col);
+    }
 
-  document.getElementById("opponentRate")
-  .textContent="1200";
+    function isInCheck(color) {
+      return isInCheckAfterMove(color, state);
+    }
 
+    function checkmate(color) {
+      if (!isInCheck(color)) return false;
+      const moves = generateMoves(color, state);
+      for (const move of moves) {
+        const newBoard = applyMove(cloneBoard(state), move);
+        if (!isInCheckAfterMove(color, newBoard)) return false;
+      }
+      return true;
+    }
 
-  document.getElementById("board-container")
-  .style.display="block";
-
-/*
-  document.getElementById("robot-area")
-  .style.display="flex";
-
-
-  updateRobotMessage(
-    "対戦相手が見つからなかったのでBot戦を開始します！"
-    
-  );
-  */
-
-
-  // ここで既存のbot.jsの処理開始
-  initBotGame();
-
-}
-
-
-   function initBotGame(){
-
-  console.log("Bot対戦へ移行");
-
-  window.location.href =
-    `./onlineBot.html?myname=${encodeURIComponent(myname)}`;
-
-}
-
-
-
- var roomid = null;
- var params = new URLSearchParams(window.location.search);
- var myname = params.get('myname');
- //var myname = "test";
- var room = null;
- let reverseColor = false;
-
-async function getOpponentName(roomId, myName) {
-let opponentName = null;
-  try {
-    const roomRef = firebase.database().ref("rooms/" + roomId);
-    let snapshot = await roomRef.once("value");
-    let room = snapshot.val();
-    roomid = roomId;
-
-    roomRef.onDisconnect().update({
-  name: "",
-  moves: "",
-  opponent: "",
-  status: "waiting",
-  turn: "",
-  winner: "",
-});
-
-    if (!room) {
-      console.log("部屋が存在しません");
+    function checkWinner(boardState) {
+      let hasWhiteKing = false, hasBlackKing = false;
+      for (let row of boardState) {
+        for (let piece of row) {
+          if (piece?.isKing) {
+            if (piece.player === "white") hasWhiteKing = true;
+            if (piece.player === "black") hasBlackKing = true;
+          }
+        }
+      }
+      if (!hasWhiteKing) return "black";
+      if (!hasBlackKing) return "white";
       return null;
     }
 
-    // 初期プレイヤーであれば name に登録
-    if (!room.name) {
-      await roomRef.update({
-        name: myName,
-        status: "waiting",
-        turn: myName
-      });
-      console.log("部屋を作成:", myName);
-      updateRobotMessage("対戦相手待ち..."); 
-      listenForEntry(myName,roomId)
-      startMatchingTimer(); //追加
-    }
-
-    // 相手プレイヤーとして参加
-    snapshot = await roomRef.once("value");
-    room = snapshot.val();
-
-    if (!room.opponent && room.name !== myName) {
-    
-    
-      await roomRef.update({
-        opponent: myName,
-        status: "playing"
-      });
-      
-      matched(); //追加
-      document.getElementById("board-container").style.display = "block";
-//document.getElementById("robot-area").style.display = "flex";
-      
-      reverseColor = true;
-      render();   // ←追加
-      
-      console.log("相手として参加:", myName);
-      listenForLosses()
-      opponentName =
-  room.name === myName
-  ? room.opponent
-  : room.name;
-
-
-document.getElementById("opponentName").textContent =
-  opponentName;
-
-
-getRate(opponentName);
-      updateRobotMessage(room.turn + "のターン"); 
-    }
-
-    
-
-    return opponentName;
-  } catch (error) {
-    console.error("対戦相手取得エラー:", error);
-    return null;
-  }
-}
-
-
-
- async function getRandomWaitingRoom() {
-
-  try {
-
-    const snapshot = await db.ref("rooms").once("value");
-    const allRooms = snapshot.val() || {};
-
-
-    // 人がいる待機部屋
-    const playerRooms = Object.entries(allRooms)
-      .filter(([, value]) =>
-        value.status === "waiting" &&
-        value.name
-      );
-
-
-    if(playerRooms.length > 0){
-
-      const randomIndex =
-        Math.floor(Math.random()*playerRooms.length);
-
-      const [roomId, roomData] =
-        playerRooms[randomIndex];
-
-      return {
-        id:roomId,
-        ...roomData
-      };
-    }
-
-
-    // 誰もいない部屋しかない場合
-    return null;
-
-
-  } catch(error){
-
-    console.error(error);
-    return null;
-
-  }
-
-}
-
-async function getWaitingRooms() {
-  try {
-    const snapshot = await db.ref("rooms").once("value");
-    const allRooms = snapshot.val() || {};
-
-    const waitingRooms = Object.entries(allRooms)
-      .filter(([, value]) => value.status === "waiting")
-      .map(([id, value]) => ({ id, ...value }));
-
-    return waitingRooms;
-  } catch (error) {
-    console.error("部屋一覧取得エラー:", error);
-    return [];
-  }
-}
-
-/*
-async function showRoomList(myname) {
-  const container = document.getElementById("room-list");
-  container.innerHTML = "<p style='color:white; textalign'>読み込み中...</p>";
-
-  const rooms = await getWaitingRooms();
-
-  if (rooms.length === 0) {
-    container.innerHTML = "<p>待機中の部屋はありません</p>";
-    return;
-  }
-
-  container.innerHTML = ""; // 初期化
-rooms.forEach((room) => {
-  const card = document.createElement("div");
-
-  // ステータスに応じたクラス
-  const statusClass = `status-${room.status.toLowerCase()}`;
-
-  // ホスト名の有無でクラスを追加
-  const hostClass = room.name ? "host-known" : "host-unknown";
-
-  // クラス名をまとめて設定
-  card.className = `room-card ${statusClass} ${hostClass}`;
-
-  card.innerHTML = `
-    <div class="room-id">部屋ID: ${room.id}</div>
-    <div class="room-host">ホスト: ${room.name || "不明"}</div>
-    <div class="room-status">ステータス: ${room.status}</div>
-  `;
-
-  card.addEventListener("click", () => {
-    console.log("選択された部屋:", room.id);
-    joinRoom(room.id, myname);
-  });
-
-  container.appendChild(card);
-});
-
-}
-
-*/
-
-function joinRoom(roomId, myname) {
-  const container = document.getElementById("room-list-container");
-  const board_container =  document.getElementById("board-container");
-  //const robot_area = document.getElementById("robot-area");
-  container.style.display = "none";
-  board_container.style.display = "flex";
-  robot_area.style.display = "flex";
-  console.log("参加部屋:", roomId);
-  getOpponentName(roomId, myname);
-  listenForOpponentMove(myname, roomId);
-  // ここで画面遷移やゲームUI初期化なども必要
-}
-
- 
-//showRoomList(myname);
-
-
-
-
-
-
-
-async function sendMove(roomId, move) {
-
-  console.log(roomId);
-
-  const movesRef = firebase.database()
-    .ref(`rooms/${roomId}/moves`);
-
-  movesRef.push(move)
-    .then(() => {
-      console.log("指し手を送信しました:", move);
-    })
-    .catch((error) => {
-      console.error("指し手の送信エラー:", error);
-    });
-
-
-  const roomRef = firebase.database().ref("rooms/" + roomId);
-  const snapshot = await roomRef.once("value");
-  const room = snapshot.val();
-
-
-  const now = Date.now();
-
-
-  // 次の手番を決定
-  const nextTurn =
-    room.turn === room.name
-      ? room.opponent
-      : room.name;
-
-
-  let updateData = {
-  turn: nextTurn,
-  lastMoveTime: now
-};
-
-
-let elapsed = 0;
-
-if(room.lastMoveTime !== 0){
-  elapsed = Math.floor(
-    (now - room.lastMoveTime) / 1000
-  );
-}
-
-
-if(room.turn === room.name){
-
-  updateData.timeWhite =
-    Math.max(0, room.timeWhite - elapsed);
-
-  if(updateData.timeWhite <= 0){
-    updateData.winner = room.opponent;
-    updateData.loser = room.name;
-    updateData.status = "finished";
-  }
-
-}else{
-
-  updateData.timeBlack =
-    Math.max(0, room.timeBlack - elapsed);
-
-  if(updateData.timeBlack <= 0){
-    updateData.winner = room.name;
-    updateData.loser = room.opponent;
-    updateData.status = "finished";
-  }
-
-}
-
-
-await roomRef.update(updateData);
-
-
-  updateRobotMessage(nextTurn + "のターン");
-}
-
-async function isMyTurn(myName) {
-  const roomRef = firebase.database().ref("rooms/" + roomid);
-  let snapshot = await roomRef.once("value");
-  let room = snapshot.val();
-  console.log(myName,room.turn,roomid);
-  return room.turn === myName;
-}
-
-
-
-
-
-
-  function updateRobotMessage(message) {
-  const bubble = document.getElementById('robot-bubble');
-  if (bubble) {
-    bubble.textContent = message;
-  }
-}
-
-const board = document.getElementById("board");
-//const status = document.getElementById("status");
-const SIZE = 8;
-let selected = null;
-let currentPlayer = "white";
-const state = [];
-
-const diceRotations = {
-  1: 'rotateX(0deg) rotateY(0deg)',
-  2: 'rotateX(-90deg) rotateY(0deg)',
-  3: 'rotateY(-90deg)',
-  4: 'rotateY(90deg)',
-  5: 'rotateX(90deg) rotateY(0deg)',
-  6: 'rotateX(180deg) rotateY(0deg)'
-};
-
-const pipsMap = {
-  1: [4],
-  2: [0, 8],
-  3: [0, 4, 8],
-  4: [0, 2, 6, 8],
-  5: [0, 2, 4, 6, 8],
-  6: [0, 2, 3, 5, 6, 8]
-};
-
-function createPiece(top, color, player, isKing = false) {
-  let die;
-
-   switch (top) {
-    case 1:
-      die = { top: 1, bottom: 6, left: 4, right: 3, front: 2, back: 5 };
-      break;
-    case 2:
-      die = { top: 2, bottom: 5, left: 4, right: 3, front: 6, back: 1 };
-      break;
-    case 3:
-      die = { top: 3, bottom: 4, left: 6, right: 1, front: 2, back: 5 };
-      break;
-    case 4:
-      die = { top: 4, bottom: 3, left: 1, right: 6, front: 2, back: 5 };
-      break;
-    case 5:
-      die = { top: 5, bottom: 2, left: 4, right: 3, front: 1, back: 6 };
-      break;
-    case 6:
-      die = { top: 6, bottom: 1, left: 4, right: 3, front: 5, back: 2 };
-      break;
-    default:
-      throw new Error("Invalid top value");
-  }
-
-  // 黒なら左右・前後を反転
-  if (player=="black") {
-    [die.left, die.right] = [die.right, die.left];
-    [die.front, die.back] = [die.back, die.front];
-  }
-
-  return { ...die, color, player, isKing };
-}
-
-function playDiceRollSound() {
-  const audio = document.getElementById('dice-roll-sound');
-  if (audio) {
-    audio.currentTime = 0; // 巻き戻し（連続再生用）
-    audio.play();
-  }
-}
-
-function rollDie(die, direction) {
-  const newDie = { ...die };
-
-  switch (direction) {
-    case "up":
-      newDie.top = die.back;
-      newDie.bottom = die.front;
-      newDie.front = die.top;
-      newDie.back = die.bottom;
-      break;
-    case "down":
-      newDie.top = die.front;
-      newDie.bottom = die.back;
-      newDie.front = die.bottom;
-      newDie.back = die.top;
-      break;
-    case "left":
-      newDie.top = die.right;
-      newDie.bottom = die.left;
-      newDie.left = die.top;
-      newDie.right = die.bottom;
-      break;
-    case "right":
-      newDie.top = die.left;
-      newDie.bottom = die.right;
-      newDie.left = die.bottom;
-      newDie.right = die.top;
-      break;
-  }
-
-  return newDie;
-}
-
-
-function setupBoard(reverse=false){
-
-  const white = reverse ? "black" : "white";
-  const black = reverse ? "white" : "black";
-
-  for(let i=0;i<SIZE;i++){
-
-    state[7][i] = createPiece(
-      backRank[i],
-      "",
-      white,
-      backRank[i] === 2
-    );
-
-    state[6][i] = createPiece(
-      1,
-      "",
-      white
-    );
-
-
-    state[0][i] = createPiece(
-      reversedBackRank[i],
-      "",
-      black,
-      reversedBackRank[i] === 2
-    );
-
-    state[1][i] = createPiece(
-      1,
-      "",
-      black
-    );
-  }
-}
-
-
-function setup() {
-
-state.length = 0;
-board.innerHTML = "";
-
-  for (let r = 0; r < SIZE; r++) {
-    const row = [];
-    const tr = document.createElement("tr");
-
-    for (let c = 0; c < SIZE; c++) {
-      const td = document.createElement("td");
-
-      td.dataset.row = r;
-      td.dataset.col = c;
-      td.className = (r + c) % 2 === 0 ? "white" : "black";
-
-      td.addEventListener("click", onCellClick);
-
-      tr.appendChild(td);
-      row.push(null);
-    }
-
-    board.appendChild(tr);
-    state.push(row);
-  }
-
-
-  const backRank = [5, 3, 3, 6, 2, 3, 3, 5];
-  const reversedBackRank = [...backRank].reverse();
-
-
-  for (let i = 0; i < SIZE; i++) {
-
-    state[7][i] =
-      createPiece(
-        backRank[i],
-        "",
-        "white",
-        backRank[i] === 2
-      );
-
-    state[6][i] =
-      createPiece(
-        1,
-        "",
-        "white"
-      );
-
-
-    state[0][i] =
-      createPiece(
-        reversedBackRank[i],
-        "",
-        "black",
-        reversedBackRank[i] === 2
-      );
-
-    state[1][i] =
-      createPiece(
-        1,
-        "",
-        "black"
-      );
-  }
-
-
-  render();
-}
-
-
-
-
-let ghostMoves = [];
-
-function getGhostMoves(piece, sr, sc) {
-  if (!piece) return [];
-
-  const moves = [];
-  const directions = [
-    { dr: -1, dc: 0 }, // 上
-    { dr: 1, dc: 0 },  // 下
-    { dr: 0, dc: -1 }, // 左
-    { dr: 0, dc: 1 }   // 右
-  ];
-
-  directions.forEach(({ dr, dc }) => {
-    for (let i = 1; i <= piece.top; i++) {
-      const r = sr + dr * i;
-      const c = sc + dc * i; //
-      if (r < 0 || r >= SIZE || c < 0 || c >= SIZE) break;
-
-      const target = state[r][c];
-      const newDie = moveDie(piece, dc * i, dr * i);
-
-      if (target) {
-        if (target.player === piece.player) break;
-            
-        if (piece.top < target.top) {
-          moves.push({ r, c, piece: { ...piece, ...newDie } });
+    function animateDiceMoveSmooth(diceElement, dx, dy, duration = 0.3) {
+      return new Promise((resolve) => {
+        const tileSize = board.getBoundingClientRect().width / 8;
+        if ((dx === 0 && dy === 0) || duration <= 0) { resolve(); return; }
+
+        const moveX = dx * tileSize;
+        const moveY = dy * tileSize;
+        const rotateX = dy === -1 ? 90 : dy === 1 ? -90 : 0;
+        const rotateY = dx === 1 ? 90 : dx === -1 ? -90 : 0;
+
+        const startX = parseFloat(diceElement.dataset.posX || "0");
+        const startY = parseFloat(diceElement.dataset.posY || "0");
+        const startRotateX = parseFloat(diceElement.dataset.rotateX || "0");
+        const startRotateY = parseFloat(diceElement.dataset.rotateY || "0");
+
+        const targetX = startX + moveX;
+        const targetY = startY + moveY;
+        const targetRotateX = startRotateX + rotateX;
+        const targetRotateY = startRotateY + rotateY;
+
+        diceElement.style.position = "absolute";
+        const startTime = performance.now();
+
+        function step(now) {
+          const elapsed = (now - startTime) / 1000;
+          const progress = Math.min(elapsed / duration, 1);
+          const currentX = startX + (targetX - startX) * progress;
+          const currentY = startY + (targetY - startY) * progress;
+          const currentRotateX = startRotateX + (targetRotateX - startRotateX) * progress;
+          const currentRotateY = startRotateY + (targetRotateY - startRotateY) * progress;
+          diceElement.style.transform = `translate(${currentX}px, ${currentY}px) rotateX(${currentRotateX}deg) rotateY(${currentRotateY}deg)`;
+          if (progress < 1) requestAnimationFrame(step);
+          else {
+            diceElement.dataset.posX = targetX;
+            diceElement.dataset.posY = targetY;
+            diceElement.dataset.rotateX = targetRotateX;
+            diceElement.dataset.rotateY = targetRotateY;
+            diceElement.style.transform = `translate(${targetX}px, ${targetY}px) rotateX(${targetRotateX}deg) rotateY(${targetRotateY}deg)`;
+            resolve();
+          }
         }
-      
-        break;
-      } else {
-        moves.push({ r, c, piece: { ...piece, ...newDie } });
-      }
-    }
-  });
-
-  return moves;
-}
-
-function createDiceElement(piece, isGhost = false) {
-  const wrapper = document.createElement("div");
-  const dice = document.createElement("div");
-
-  dice.id = `piece-${piece.id}`;
-  dice.className = "dice";
-
-  dice.style.transform = diceRotations[piece.top];
-  dice.dataset.rotation = "0,0";
-
-
-  if (isGhost) {
-    wrapper.className = "ghost-wrapper";
-    dice.classList.add("ghost-dice");
-  }
-
-
-  ["front", "back", "right", "left", "top", "bottom"].forEach((side) => {
-
-    const face = document.createElement("div");
-
-    face.className = `face ${side}`;
-
-
-    
-    if (piece.isKing) {
-
-  face.style.background = reverseColor
-    ? (piece.player === "white" ? "#06c" : "#c00")
-    : (piece.player === "white" ? "#c00" : "#06c");
-
-
-
-} else {
-
-  let diceColor;
-
-  if (piece.player === "white") {
-    diceColor = "#fff";
-  } else {
-    diceColor = "#222";
-  }
-
-  if (reverseColor) {
-    diceColor = piece.player === "white"
-      ? "#222"
-      : "#fff";
-  }
-
-  face.style.background = diceColor;
-
-}
-
-
-
-    const faceNumberMap = {
-      front: 1,
-      back: 6,
-      right: 3,
-      left: 4,
-      top: 2,
-      bottom: 5,
-    };
-
-
-    const faceNum = faceNumberMap[side];
-
-
-    pipsMap[faceNum].forEach(() => {
-
-      const pip = document.createElement("div");
-
-      pip.className = "pip";
-
-
-      // 目の色
-      if (reverseColor) {
-
-        pip.style.backgroundColor =
-          piece.player === "white"
-            ? "#fff"
-            : "#000";
-
-      } else {
-
-        pip.style.backgroundColor =
-          piece.player === "white"
-            ? "#000"
-            : "#fff";
-
-      }
-
-
-      face.appendChild(pip);
-
-    });
-
-
-    dice.appendChild(face);
-
-  });
-
-
-
-  if (isGhost) {
-    wrapper.appendChild(dice);
-    return wrapper;
-  }
-
-
-  return dice;
-}
-
-// サイコロの累積回転角度（グローバル変数でも、diceElement.datasetでも可）
-let rotationX = 0;
-let rotationY = 0;
-let rotationZ = 0;
-
-function animateDiceMoveSmooth(diceElement, dx, dy, duration = 0.3) {
-  return new Promise((resolve) => {
-    const tileSize = 60;
-    if (dx === 0 && dy === 0 || duration <= 0) {
-      resolve();
-      return;
-    }
-
-    const moveX = dx * tileSize;
-    const moveY = dy * tileSize;
-
-    // サイコロの回転（1マス分だけ対応）
-    const rotateX = dy === -1 ? 90 : dy === 1 ? -90 : 0;
-    const rotateY = dx === 1 ? 90 : dx === -1 ? -90 : 0;
-
-    // 現在の位置と回転を取得
-    const startX = parseFloat(diceElement.dataset.posX || "0");
-    const startY = parseFloat(diceElement.dataset.posY || "0");
-    const startRotateX = parseFloat(diceElement.dataset.rotateX || "0");
-    const startRotateY = parseFloat(diceElement.dataset.rotateY || "0");
-
-    const targetX = startX + moveX;
-    const targetY = startY + moveY;
-    const targetRotateX = startRotateX + rotateX;
-    const targetRotateY = startRotateY + rotateY;
-
-    diceElement.style.position = "absolute";
-
-    const startTime = performance.now();
-
-    function step(now) {
-      const elapsed = (now - startTime) / 1000;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const currentX = startX + (targetX - startX) * progress;
-      const currentY = startY + (targetY - startY) * progress;
-      const currentRotateX = startRotateX + (targetRotateX - startRotateX) * progress;
-      const currentRotateY = startRotateY + (targetRotateY - startRotateY) * progress;
-
-      diceElement.style.transform = `
-        translate(${currentX}px, ${currentY}px)
-        rotateX(${currentRotateX}deg)
-        rotateY(${currentRotateY}deg)
-      `;
-
-      if (progress < 1) {
         requestAnimationFrame(step);
-      } else {
-        // 最終状態に固定
-        diceElement.dataset.posX = targetX;
-        diceElement.dataset.posY = targetY;
-        diceElement.dataset.rotateX = targetRotateX;
-        diceElement.dataset.rotateY = targetRotateY;
+      });
+    }
 
-        diceElement.style.transform = `
-          translate(${targetX}px, ${targetY}px)
-          rotateX(${targetRotateX}deg)
-          rotateY(${targetRotateY}deg)
-        `;
-        resolve();
+    async function animateMoveAndUpdateState(sr, sc, directions, piece) {
+      let currentDie = { ...piece };
+      let row = sr;
+      let col = sc;
+      for (const dir of directions) {
+        const dr = dir === "up" ? -1 : dir === "down" ? 1 : 0;
+        const dc = dir === "left" ? -1 : dir === "right" ? 1 : 0;
+        const nr = row + dr;
+        const nc = col + dc;
+        const diceElem = board.rows[row].cells[col].querySelector(".dice");
+        if (!diceElem) break;
+        currentDie = rollDie(currentDie, dir);
+        await animateDiceMoveSmooth(diceElem, dc, dr);
+        playDiceRollSound();
+        board.rows[row].cells[col].innerHTML = "";
+        board.rows[nr].cells[nc].appendChild(diceElem);
+        state[nr][nc] = { ...piece, ...currentDie };
+        state[row][col] = null;
+        render();
+        row = nr;
+        col = nc;
       }
-    }
-
-    requestAnimationFrame(step);
-  });
-}
-
-async function animateMoveAndUpdateState(sr, sc, directions, piece) {
-  let currentDie = { ...piece };
-  let row = sr;
-  let col = sc;
-
-  for (const dir of directions) {
-    const dr = dir === "up" ? -1 : dir === "down" ? 1 : 0;
-    const dc = dir === "left" ? -1 : dir === "right" ? 1 : 0;
-    const nr = row + dr;
-    const nc = col + dc;
-    
-    const diceElem = board.rows[row].cells[col].querySelector(".dice");
-
-    // 出目更新
-    currentDie = rollDie(currentDie, dir);
-
-    // アニメーション
-    await animateDiceMoveSmooth(diceElem, dc, dr);
-    playDiceRollSound();
-
-    // DOM操作でマス移動（renderなし）
-    board.rows[row].cells[col].innerHTML = "";
-    board.rows[nr].cells[nc].appendChild(diceElem);
-
-    // 内部状態更新
-    state[nr][nc] = { ...piece, ...currentDie };
-    state[row][col] = null;
-
-    // dice の表示を更新
-    render();
-
-    row = nr;
-    col = nc;
-  }
-
-  ghostMoves = [];
-  selected = null;
-  render(); // 最後にまとめて再描画
-}
-
-
-
-function moveDie(originalDie, dx, dy) {
-  let die = { ...originalDie };
-
-  const step = (dir, count) => {
-    for (let i = 0; i < count; i++) {
-      die = rollDie(die, dir);
-    }
-  };
-
-  if (dy < 0) step("up", -dy);
-  else if (dy > 0) step("down", dy);
-
-  if (dx < 0) step("left", -dx);
-  else if (dx > 0) step("right", dx);
-
-  return die;
-}
-
-
-
-
-function render() {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const td = board.rows[r].cells[c];
-      td.classList.remove("selected");
-      td.innerHTML = "";
-      const piece = state[r][c];
-      if (piece) {
-        const dice = createDiceElement(piece);
-        td.appendChild(dice);
-      }
-    }
-  }
-
-  // ゴースト描画
-console.log(`Ghost moves: `, ghostMoves);
-ghostMoves.forEach(({ r, c, piece }) => {
-  const td = board.rows[r].cells[c];
-  const ghost = createDiceElement(piece, true);
-  console.log(`Appending ghost to cell at [${r}, ${c}]`);
-  td.appendChild(ghost);
-});
-
-
-}
-
-async function onCellClick(e) {
-  const row = parseInt(e.currentTarget.dataset.row);
-  const col = parseInt(e.currentTarget.dataset.col);
-  const cell = state[row][col];
-
-  const myTurn = await isMyTurn(myname);
-  console.log(myTurn);
-  if (!myTurn) {
-    return;
-  }
-
-  ghostMoves = getGhostMoves(selected, row, col);
-  render();
-
-  if (!selected && cell && cell.player === currentPlayer) {
-    selected = [row, col];
-    ghostMoves = getGhostMoves(cell, row, col);
-    render();
-    board.rows[row].cells[col].classList.add("selected");
-    return;
-  }
-
-  if (selected) {
-    const [sr, sc] = selected;
-    const piece = state[sr][sc];
-    const target = state[row][col];
-
-    const dr = row - sr;
-    const dc = col - sc;
-    const isStraight = (dr === 0 || dc === 0);
-    const distance = Math.max(Math.abs(dr), Math.abs(dc));
-    const inRange = distance <= piece.top;
-
-    if (!isStraight || !inRange) {
-      selected = null;
       ghostMoves = [];
+      selected = null;
       render();
-      return;
     }
 
-    const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
-    const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
-    let r = sr + stepR;
-    let c = sc + stepC;
-    let foundEnemy = null;
+    async function isMyTurn() {
+      if (!roomid) return false;
+      const snap = await db.ref("rooms/" + roomid).once("value");
+      const room = snap.val();
+      if (!room) return false;
+      return room.turn === myname;
+    }
 
-    while (r !== row || c !== col) {
-      const mid = state[r][c];
-      if (mid) {
-        if (mid.player === piece.player) {
-          selected = null;
-          ghostMoves = [];
-          render();
+    async function sendMove(roomId, move) {
+      const movesRef = db.ref(`rooms/${roomId}/moves`);
+      await movesRef.push(move).catch(() => {});
+      const roomRef = db.ref("rooms/" + roomId);
+      const snap = await roomRef.once("value");
+      room = snap.val();
+      if (!room || isCancelRequested) return;
+      const now = Date.now();
+      const nextTurn = room.turn === room.name ? room.opponent : room.name;
+      let updateData = { turn: nextTurn, lastMoveTime: now };
+
+      let elapsed = 0;
+      if (room.lastMoveTime !== 0) elapsed = Math.floor((now - room.lastMoveTime) / 1000);
+
+      if (room.turn === room.name) {
+        updateData.timeWhite = Math.max(0, room.timeWhite - elapsed);
+        if (updateData.timeWhite <= 0) {
+          updateData.winner = room.opponent;
+          updateData.loser = room.name;
+          updateData.status = "finished";
+        }
+      } else {
+        updateData.timeBlack = Math.max(0, room.timeBlack - elapsed);
+        if (updateData.timeBlack <= 0) {
+          updateData.winner = room.name;
+          updateData.loser = room.opponent;
+          updateData.status = "finished";
+        }
+      }
+      await roomRef.update(updateData);
+      showStatus(`${nextTurn}のターン`);
+    }
+
+    function getRate(opponentName) {
+      return Promise.all([
+        db2.collection("users").where("name", "==", myname).get(),
+        db2.collection("users").where("name", "==", opponentName).get()
+      ]).then(([mySnap, oppSnap]) => {
+        if (mySnap.empty || oppSnap.empty) return;
+        const myDoc = mySnap.docs[0];
+        const oppDoc = oppSnap.docs[0];
+        const myRate = myDoc.data().rate || 1500;
+        const oppRate = oppDoc.data().rate || 1500;
+        myRateLoaded = myRate;
+        document.getElementById("my-rate").innerText = myRate;
+        document.getElementById("playerRate").innerText = myRate;
+        document.getElementById("playerName").innerText = myname;
+        document.getElementById("matching-playerRate").innerText = myRate;
+        document.getElementById("matching-playerName").innerText = myname;
+        document.getElementById("opponentRate").innerText = oppRate;
+        document.getElementById("matching-opponentRate").innerText = oppRate;
+        document.getElementById("matching-opponentName").innerText = opponentName;
+      }).catch(err => console.error("Firestore読み込みエラー:", err));
+    }
+
+    async function refreshRoomAndClocks() {
+      if (!roomid) return;
+      const roomRef = db.ref("rooms/" + roomid);
+      const snap = await roomRef.once("value");
+      room = snap.val();
+      if (!room || isCancelRequested) return;
+
+      let white = room.timeWhite ?? 600;
+      let black = room.timeBlack ?? 600;
+
+      if (room.lastMoveTime && room.lastMoveTime !== 0 && room.status !== "finished") {
+        const elapsed = (Date.now() - room.lastMoveTime) / 1000;
+        if (room.turn === room.name) white -= elapsed;
+        else if (room.turn === room.opponent) black -= elapsed;
+      }
+      white = Math.max(0, white);
+      black = Math.max(0, black);
+
+      const meIsHost = room.name === myname;
+      const myTime = meIsHost ? white : black;
+      const oppTime = meIsHost ? black : white;
+      document.getElementById("player-clock").innerText = formatTime(myTime);
+      document.getElementById("opponent-clock").innerText = formatTime(oppTime);
+
+      if (room.status !== "finished" && (white <= 0 || black <= 0)) {
+        const winner = white <= 0 ? room.opponent : room.name;
+        const loser = white <= 0 ? room.name : room.opponent;
+        if (winner && loser) await roomRef.update({ winner, loser, status: "finished" });
+      }
+
+      if (room.status === "finished" && room.winner && room.loser) {
+        if (!finishedHandled && (myname === room.winner || myname === room.loser)) {
+          finishedHandled = true;
+          const opponentName = myname === room.winner ? room.loser : room.winner;
+          try {
+            const [mySnap, oppSnap] = await Promise.all([
+              db2.collection("users").where("name", "==", myname).get(),
+              db2.collection("users").where("name", "==", opponentName).get()
+            ]);
+            if (!mySnap.empty && !oppSnap.empty) {
+              const myDoc = mySnap.docs[0];
+              const oppDoc = oppSnap.docs[0];
+              const myRate = myDoc.data().rate || 1500;
+              const oppRate = oppDoc.data().rate || 1500;
+              const result = myname === room.winner ? 1 : 0;
+              const newRate = calculateEloRating(myRate, oppRate, result);
+              await myDoc.ref.update({ rate: newRate });
+              showModal(`${result === 1 ? "勝利" : "敗北"}\nレート ${myRate} → ${newRate}`);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      }
+    }
+
+    async function listenForOpponentMove(myName, roomId) {
+      if (moveListener) moveListener.off();
+      moveListener = db.ref("rooms/" + roomId + "/moves");
+      moveListener.limitToLast(1).on("child_added", snapshot => {
+        const move = snapshot.val();
+        if (!move || move.player === myName) return;
+        applyOpponentMove(move.from, move.to, move.diceState);
+      });
+    }
+
+    async function applyOpponentMove(from, to, diceState) {
+      const sr = from.y;
+      const sc = from.x;
+      const tr = to.y;
+      const tc = to.x;
+      const piece = state[sr][sc];
+      if (!piece) return;
+      const dx = tc - sc;
+      const dy = tr - sr;
+      const directions = [];
+      for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+      for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+      await animateMoveAndUpdateState(sr, sc, directions, piece);
+      state[tr][tc] = { ...piece, ...diceState };
+      state[sr][sc] = null;
+      render();
+      showStatus(`${myname}のターン`);
+    }
+
+    function reportVictoryReset(room) {
+      if (!roomid || !room) return;
+      db.ref("rooms/" + roomid).update({
+        winner: "",
+        loser: "",
+        status: "waiting",
+        name: "",
+        turn: "",
+        opponent: "",
+        moves: "",
+        timeWhite: 600,
+        timeBlack: 600,
+        lastMoveTime: 0
+      }).catch(() => {});
+    }
+
+    function updateLocalPlayerLabels(room) {
+      const meIsHost = room.name === myname;
+      const opponentName = meIsHost ? room.opponent : room.name;
+      document.getElementById("playerName").innerText = myname;
+      document.getElementById("opponentName").innerText = opponentName || "???";
+      if (opponentName) getRate(opponentName);
+    }
+
+    function attachRoomListener() {
+      if (!roomid) return;
+      const ref = db.ref("rooms/" + roomid);
+      ref.off("value");
+      ref.on("value", snap => {
+        const room = snap.val();
+        if (!room || isCancelRequested) return;
+        if (room.status === "playing") {
+          updateLocalPlayerLabels(room);
+          applyPerspective(room);
+          if (!document.getElementById("game-screen").classList.contains("active")) {
+            switchScreen("game-screen");
+          }
+          if (!isMatched) {
+            isMatched = true;
+            clearTimeout(matchTimer);
+            if (matchmakingPollTimer) {
+              clearInterval(matchmakingPollTimer);
+              matchmakingPollTimer = null;
+            }
+            document.getElementById("matching-text").textContent = "Match found!";
+          }
+          if (!gameStarted) {
+            setupBoard();
+            gameStarted = true;
+          }
+          showStatus(room.turn === myname ? "あなたのターン" : "相手のターン");
+        } else if (room.status === "waiting") {
+          if (room.opponent) {
+            updateLocalPlayerLabels(room);
+          }
+        }
+      });
+    }
+
+    async function getRandomWaitingRoom() {
+      const snapshot = await db.ref("rooms").once("value");
+      const allRooms = snapshot.val() || {};
+      const waitingRooms = Object.entries(allRooms)
+        .filter(([, value]) => value.status === "waiting" && value.name && value.name !== myname)
+        .map(([id, value]) => ({ id, ...value }))
+        .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+      if (!waitingRooms.length) return null;
+      return waitingRooms[0];
+    }
+
+    async function getOpponentName(roomId, myName) {
+      const roomRef = db.ref("rooms/" + roomId);
+      const snap = await roomRef.once("value");
+      const room = snap.val();
+      roomid = roomId;
+      roomRef.onDisconnect().remove().catch(() => {});
+
+      if (!room) return null;
+
+      if (!room.name) {
+        await roomRef.update({ name: myName, status: "waiting", turn: myName });
+        return null;
+      }
+
+      if (!room.opponent && room.name !== myName) {
+        await roomRef.update({ opponent: myName, status: "playing" });
+      }
+
+      const current = (await roomRef.once("value")).val();
+      const opponentName = current.name === myName ? current.opponent : current.name;
+      if (opponentName) {
+        document.getElementById("opponentName").textContent = opponentName;
+        await getRate(opponentName);
+      }
+      if (!document.getElementById("game-screen").classList.contains("active")) switchScreen("game-screen");
+      attachRoomListener();
+      listenForOpponentMove(myName, roomId);
+      return opponentName;
+    }
+
+    function startMatchingTimer() {
+      document.getElementById("matching-text").textContent = "Matching... The match against the bot will start in 30 seconds.";
+      matchTimer = setTimeout(() => {
+        if (!isMatched) startBotMatch();
+      }, 30000);
+    }
+
+    function matched() {
+      isMatched = true;
+      if (matchTimer) clearTimeout(matchTimer);
+      document.getElementById("matching-text").textContent = "Opponent found!";
+      document.getElementById("match-button").style.display = "none";
+    }
+
+    async function startBotMatch() {
+      if (roomid) {
+        db.ref("rooms/" + roomid).update({
+          name: "",
+          opponent: "",
+          status: "waiting",
+          turn: "",
+          moves: "",
+          winner: ""
+        }).catch(() => {});
+      }
+      document.getElementById("opponentName").textContent = "Diceman Bot";
+      document.getElementById("opponentRate").textContent = "1200";
+      switchScreen("game-screen");
+      location.href = `./onlineBot.html?myname=${encodeURIComponent(myname)}`;
+    }
+
+    async function findAndMatch() {
+      const button = document.getElementById("match-button");
+      button.disabled = true;
+      button.style.opacity = "0.5";
+      button.style.cursor = "not-allowed";
+      switchScreen("matching-screen");
+      document.getElementById("matching-playerName").textContent = myname;
+      document.getElementById("matching-playerRate").textContent = String(myRateLoaded || 1200);
+      document.getElementById("matching-opponentName").textContent = "???";
+      document.getElementById("matching-opponentRate").textContent = "????";
+      document.getElementById("matching-text").textContent = "Searching for player around your rating...";
+
+      if (matchmakingPollTimer) {
+        clearInterval(matchmakingPollTimer);
+        matchmakingPollTimer = null;
+      }
+
+      const tryJoinWaitingRoom = async () => {
+        const room = await getRandomWaitingRoom();
+        if (!room) return false;
+        if (roomid && room.id === roomid) return false;
+
+        roomid = room.id;
+        const roomRef = db.ref("rooms/" + roomid);
+        const current = (await roomRef.once("value")).val();
+        if (!current || current.status !== "waiting" || current.name === myname) return false;
+
+        await roomRef.update({
+          opponent: myname,
+          status: "playing",
+          lastMoveTime: Date.now(),
+          turn: current.name,
+          createdAt: current.createdAt || Date.now()
+        });
+
+        applyPerspective(current);
+        if (!gameStarted) {
+          setupBoard();
+          gameStarted = true;
+        }
+        attachRoomListener();
+        matched();
+        const opponentName = current.name;
+        document.getElementById("matching-opponentName").textContent = opponentName;
+        document.getElementById("matching-opponentRate").textContent = "????";
+        document.getElementById("opponentName").textContent = opponentName;
+        await getRate(opponentName);
+        switchScreen("game-screen");
+        listenForOpponentMove(myname, roomid);
+        return true;
+      };
+
+      if (await tryJoinWaitingRoom()) return;
+
+      const newRoomRef = db.ref("rooms").push();
+      roomid = newRoomRef.key;
+      await newRoomRef.set({
+        name: myname,
+        opponent: "",
+        status: "waiting",
+        turn: myname,
+        moves: "",
+        winner: "",
+        loser: "",
+        timeWhite: 600,
+        timeBlack: 600,
+        lastMoveTime: 0,
+        timeOverProcessed: false,
+        createdAt: Date.now()
+      });
+      newRoomRef.onDisconnect().remove().catch(() => {});
+      attachRoomListener();
+      startMatchingTimer();
+
+      const waitingRef = db.ref("rooms/" + roomid);
+      waitingRef.on("value", async snap => {
+        const room = snap.val();
+        if (!room || isCancelRequested) return;
+        if (isCancelRequested) return;
+        if (room.opponent && room.status === "playing") {
+          if (matchmakingPollTimer) {
+            clearInterval(matchmakingPollTimer);
+            matchmakingPollTimer = null;
+          }
+          clearTimeout(matchTimer);
+          matched();
+          switchScreen("game-screen");
+          updateLocalPlayerLabels(room);
+          if (!gameStarted) {
+            setupBoard();
+            gameStarted = true;
+          }
+          listenForOpponentMove(myname, roomid);
+          waitingRef.off();
+        }
+      });
+
+      matchmakingPollTimer = setInterval(async () => {
+        if (!roomid) return;
+        const currentRoom = (await db.ref("rooms/" + roomid).once("value")).val();
+        if (currentRoom && currentRoom.status === "playing" && currentRoom.opponent) {
+          clearInterval(matchmakingPollTimer);
+          matchmakingPollTimer = null;
           return;
-        } else {
+        }
+        await tryJoinWaitingRoom();
+      }, 1000);
+    }
+
+    async function onCellClick(e) {
+      const row = parseInt(e.currentTarget.dataset.row, 10);
+      const col = parseInt(e.currentTarget.dataset.col, 10);
+      const cell = state[row][col];
+
+      if (!roomid) return;
+      const myTurn = await isMyTurn();
+      if (!myTurn) return;
+
+      if (!selected && cell && cell.player === myColor) {
+        selected = [row, col];
+        ghostMoves = getGhostMoves(cell, row, col);
+        render();
+        return;
+      }
+
+      if (!selected) return;
+
+      const [sr, sc] = selected;
+      const piece = state[sr][sc];
+      const target = state[row][col];
+
+      const dr = row - sr;
+      const dc = col - sc;
+      const isStraight = (dr === 0 || dc === 0);
+      const distance = Math.max(Math.abs(dr), Math.abs(dc));
+      const inRange = distance <= piece.top;
+
+      if (!isStraight || !inRange) {
+        selected = null;
+        ghostMoves = [];
+        render();
+        return;
+      }
+
+      const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
+      const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
+      let r = sr + stepR;
+      let c = sc + stepC;
+      let foundEnemy = null;
+
+      while (r !== row || c !== col) {
+        const mid = state[r][c];
+        if (mid) {
+          if (mid.player === piece.player) {
+            selected = null; ghostMoves = []; render(); return;
+          }
           if (foundEnemy) {
-            selected = null;
-            ghostMoves = [];
-            render();
-            return;
+            selected = null; ghostMoves = []; render(); return;
           }
           foundEnemy = { ...mid, row: r, col: c };
         }
+        r += stepR;
+        c += stepC;
       }
-      r += stepR;
-      c += stepC;
-    }
 
-    const dx = col - sc;
-    const dy = row - sr;
-    const newDie = moveDie(piece, dx, dy);
-    const directions = [];
-    for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
-    for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
-
-    // 敵がいて、その敵の駒が強いときだけ取る
-    if (target && target.player !== piece.player && piece.top < target.top) {
-      await animateMoveAndUpdateState(sr, sc, directions, piece);
-      state[row][col] = { ...piece, ...newDie };
-      state[sr][sc] = null;
-      ghostMoves = [];
-      selected = null;
-      render();
-
-      const move = {
-        from: { y: sr, x: sc },
-        to: { y: row, x: col },
-        player: myname,
-        diceState: newDie,
-        timestamp: Date.now()
-      };
-console.log("送信直前:");
-console.log(JSON.stringify(move, null, 2));
-      sendMove(roomid, move);
-
-      if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
-        winnerrateupdate() // 勝ち
-        reportVictory()
-        showModal(myname + "wins!");
-        firebase.database().ref("rooms/" + roomid).update({
-    winner: "",
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-        setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 3000); // 1000ミリ秒 = 1秒
-        return;
-      }
-      if (checkmate("black")) {
-        winnerrateupdate() // 勝ち
-        reportVictory()
-        setTimeout(() => {
-          showModal(myname + "wins!");
-          firebase.database().ref("rooms/" + roomid).update({
-    winner: "",
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-          setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 3000); // 1000ミリ秒 = 1秒
-        }, 2000);
-        return;
-      }
-      return;
-    }
-
-    // 途中に敵がいて、それを取れる場合
-    if (foundEnemy && piece.top < foundEnemy.top && foundEnemy.row === row && foundEnemy.col === col) {
-      await animateMoveAndUpdateState(sr, sc, directions, piece);
-      state[row][col] = { ...piece, ...newDie };
-      state[sr][sc] = null;
-      ghostMoves = [];
-      selected = null;
-      render();
-
-      const move = {
-        from: { y: sr, x: sc },
-        to: { y: row, x: col },
-        player: myname,
-        diceState: newDie,
-        timestamp: Date.now()
-      };
-      
-      
-console.log("送信直前:");
-console.log(JSON.stringify(move, null, 2));
-      sendMove(roomid, move);
-
-      if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.color === 'black') {
-        winnerrateupdate() // make
-        reportVictory()
-        showModal(myname + "wins!");
-        firebase.database().ref("rooms/" + roomid).update({
-    winner: "",
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-        setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 3000); // 1000ミリ秒 = 1秒
-        return;
-      }
-      if (checkmate("black")) {
-        winnerrateupdate() // make
-        reportVictory()
-        setTimeout(() => {
-          showModal(myname + "wins!");
-          firebase.database().ref("rooms/" + roomid).update({
-    winner: "",
-    status:"waiting",
-    name:"",
-    turn:"",
-    opponent:"",
-    moves:"",
-  })
-          setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 3000); // 1000ミリ秒 = 1秒
-        }, 2000);
-        return;
-      }
-      return;
-    }
-
-    // 通常移動（敵なし）
-    if (!target && !foundEnemy) {
-      await animateMoveAndUpdateState(sr, sc, directions, piece);
-      state[row][col] = { ...piece, ...newDie };
-      state[sr][sc] = null;
-      ghostMoves = [];
-      selected = null;
-      render();
-
-      const move = {
-        from: { y: sr, x: sc },
-        to: { y: row, x: col },
-        player: myname,
-        diceState: newDie,
-        timestamp: Date.now()
-      };
-
-console.log("送信直前:");
-console.log(JSON.stringify(move, null, 2));
-      sendMove(roomid, move);
-      return;
-    }
-
-    // 非合法だった場合（到達できても取れない・条件を満たさない）
-    selected = null;
-    ghostMoves = [];
-    render();
-  }
-}
-
-
-
-
-
-
-
-function hasPieceInBetween(sr, sc, row, col, board = state) {
-  const dr = row - sr;
-  const dc = col - sc;
-  const stepR = dr === 0 ? 0 : dr / Math.abs(dr);
-  const stepC = dc === 0 ? 0 : dc / Math.abs(dc);
-  let r = sr + stepR;
-  let c = sc + stepC;
-
-  while (r !== row || c !== col) {
-    if (board[r][c]) {
-      return { blocked: true, piece: board[r][c] };
-    }
-    r += stepR;
-    c += stepC;
-  }
-  return { blocked: false, piece: null };
-}
-
-
-/*
-function checkWin(attacker) {// checkmate()に変更
-  if (checkmate(attacker)) {
-    showModal(`checkmate! ${attacker} wins!`);
-    setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 500); // 1000ミリ秒 = 1秒
-    return;
-  }
-  endTurn(attacker);
-}
-  */
-
-
-function listenForEntry(myName, roomId){
-  const roomRef = firebase.database().ref("rooms/" + roomId);
-
-  roomRef.on("value", (snapshot) => {
-    const room = snapshot.val();
-    if (!room) return;
-
-    if (room.opponent){
-
-matched();
-      document.getElementById("opponentName").textContent = room.opponent;
-      getRate(room.opponent);
-
-      // 先手側もゲーム画面表示
-      document.getElementById("board-container").style.display="block";
-      //document.getElementById("robot-area").style.display="flex";
-
-      updateRobotMessage(room.turn + "のターン");
-
-      listenForOpponentMove(myName, roomId);
-
-    }else{
-      updateRobotMessage("対戦相手を待っています...");
-    }
-  });
-}
-
-function listenForOpponentMove(myName,roomId){
-  const moveRef = firebase.database().ref("rooms/" + roomId+"/moves");
-  moveRef.limitToLast(1).on("child_added", (snapshot) => {
-    const move = snapshot.val();
-    if (!move) return;
-
-    // 自分の手ではなく、相手の手であれば反映
-    if (move.player !== myName) {
-      console.log("相手の手を検出:", move);
-
-      // 移動アニメーションや盤面反映ロジックを呼び出す
-      applyOpponentMove(move.from, move.to, move.diceState);
-    }
-  });
-}
-
-async function applyOpponentMove(from, to, diceState) {
-  const sr = 7 - from.y;
-  const sc = 7 - from.x;
-  const tr = 7 - to.y;
-  const tc = 7 - to.x;
-
-  const piece = state[sr][sc];
-  if (!piece) return;
-
-  state[sr][sc] = null;
-  state[tr][tc] = {
-    ...piece,
-    diceState: diceState
-  };
-
-  const dx = tc - sc;
-  const dy = tr - sr;
-  const directions = [];
-  for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
-  for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
-
-  await animateMoveAndUpdateState(sr, sc, directions, piece);
-
-  render();
-  updateRobotMessage(myname + "のターン"); 
-}
-
-
-
-function checkWinner(boardState) {
-  let hasWhiteKing = false;
-  let hasBlackKing = false;
-  for (let row of boardState) {
-    for (let piece of row) {
-      if (piece?.isKing) {
-        if (piece.player === "white") hasWhiteKing = true;
-        if (piece.player === "black") hasBlackKing = true;
-      }
-    }
-  }
-  if (!hasWhiteKing) return "black";
-  if (!hasBlackKing) return "white";
-  return null;
-}
-
-function isInCheck(color) {
-  return isInCheckAfterMove(color, state);
-}
-
-
-function isInCheckAfterMove(color, board) {
-  let kingPosition = null;
-
-  for (let row = 0; row < 8; row++) {
-    for (let col = 0; col < 8; col++) {
-      const piece = board[row][col];
-      if (piece && piece.player === color && piece.isKing) {
-        kingPosition = { row, col };
-        break;
-      }
-    }
-    if (kingPosition) break;
-  }
-
-  if (!kingPosition) return true; // キングがいない＝既に取られてる
-
-  const opponent = color === "white" ? "black" : "white";
-  const oppMoves = generateMoves(opponent, board);
-  for (const move of oppMoves) {
-    const [tr, tc] = move.to;
-    if (tr === kingPosition.row && tc === kingPosition.col) {
-      return true;
-    }
-  }
-
-  return false;
-}
-function endTurn(player) {
-  currentPlayer = player === "white" ? "black" : "white";
-  updateRobotMessage(`${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`);
-  //status.textContent = `${currentPlayer.charAt(0).toUpperCase() + currentPlayer.slice(1)}のターン`;
-  botTurn();
-}
-
-/*
-function checkWin(attacker) {// checkmate()に変更
-  if (checkmate(attacker)) {
-    showModal(`checkmate! ${attacker} wins!`);
-    setTimeout(() => {
-    window.location.href = `./online.html?myname=${encodeURIComponent(myname)}`;// ← 遷移先URL
-  }, 500); // 1000ミリ秒 = 1秒
-    return;
-  }
-  endTurn(attacker);
-}
-  */
-
-
-
-
-
-
-
-
-
-
-
-function cloneBoard(boardState) {
-  return boardState.map(row => row.map(cell => cell ? { ...cell } : null));
-}
-
-function evaluateBoard(board) {
-  let score = 0;
-
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const piece = board[r][c];
-      if (piece) {
-        let baseValue = 10 + piece.top; // 基本値 + 出目（攻撃力）
-        if (piece.isKing) baseValue += 50; // キングはさらに高評価
-        // 盤の前方にいるほど高評価（前に出ている駒は積極的）
-        const advanceBonus = piece.player === "black" ? (7 - r) : r;
-        baseValue += advanceBonus;
-
-        // 敵駒としてマイナス、味方としてプラス
-        score += piece.player === "black" ? baseValue : -baseValue;
-      }
-    }
-  }
-
-  return score;
-}
-
-function hasBlockingPiece(sr, sc, er, ec, board) {
-  const dr = Math.sign(er - sr);
-  const dc = Math.sign(ec - sc);
-  let r = sr + dr;
-  let c = sc + dc;
-  while (r !== er || c !== ec) {
-    if (board[r][c]) return true;
-    r += dr;
-    c += dc;
-  }
-  return false;
-}
-
-function getBlockingPosition(sr, sc, dr, dc, board) {
-  let r = sr + dr;
-  let c = sc + dc;
-  while (r >= 0 && r < 8 && c >= 0 && c < 8) {
-    if (board[r][c]) return [r, c];
-    r += dr;
-    c += dc;
-  }
-  return [-1, -1];
-}
-
-
-function generateMoves(player, boardState) {
-  const moves = [];
-  for (let r = 0; r < 8; r++) {
-    for (let c = 0; c < 8; c++) {
-      const piece = boardState[r][c];
-      if (!piece || piece.player !== player) continue;
-      const dirs = [[1,0],[0,1],[-1,0],[0,-1]];
-
-      for (const [dr, dc] of dirs) {
-        for (let dist = 1; dist <= piece.top; dist++) {
-          const nr = r + dr * dist;
-          const nc = c + dc * dist;
-          if (nr < 0 || nc < 0 || nr >= 8 || nc >= 8) break;
-
-          const target = boardState[nr][nc];
-
-          // 中間に駒がある場合、そこが敵ならそこで止まる
-          if (hasBlockingPiece(r, c, nr, nc, boardState)) {
-            const [br, bc] = getBlockingPosition(r, c, dr, dc, boardState);
-            const blocking = boardState[br][bc];
-            if (blocking && blocking.player !== player && piece.top < blocking.top) {
-              // 敵で、かつ大きい目なので取れる → moveに追加
-              moves.push({ from: [r, c], to: [br, bc] });
-            }
-            break; // それ以降進めない
-          }
-
-          // 敵がいて取れる場合
-          if (target) {
-            if (target.player === player) break; // 味方 → 進めない
-            if (piece.top < target.top) {
-              moves.push({ from: [r, c], to: [nr, nc] });
-            }
-            break;
-          }
-
-          // 空きマス
-          moves.push({ from: [r, c], to: [nr, nc] });
+      const dx = col - sc;
+      const dy = row - sr;
+      const newDie = moveDie(piece, dx, dy);
+      const directions = [];
+      for (let i = 0; i < Math.abs(dx); i++) directions.push(dx > 0 ? "right" : "left");
+      for (let i = 0; i < Math.abs(dy); i++) directions.push(dy > 0 ? "down" : "up");
+
+      const moveExecute = async () => {
+        await animateMoveAndUpdateState(sr, sc, directions, piece);
+        state[row][col] = { ...piece, ...newDie };
+        state[sr][sc] = null;
+        ghostMoves = [];
+        selected = null;
+        render();
+        const move = {
+          from: { y: sr, x: sc },
+          to: { y: row, x: col },
+          player: myname,
+          diceState: newDie,
+          timestamp: Date.now()
+        };
+        await sendMove(roomid, move);
+
+        const winnerByKing = checkWinner(state);
+        if (winnerByKing) {
+          const me = myname;
+          const meWon = (winnerByKing === (room ? (room.name === myname ? "white" : "black") : "white"));
         }
+      };
+
+      if (target && target.player !== piece.player && piece.top < target.top) {
+        await moveExecute();
+        const winColor = checkWinner(state);
+        if (winColor) {
+          const roomSnap = await db.ref("rooms/" + roomid).once("value");
+          const room = roomSnap.val();
+          if (room && room.status !== "finished") {
+            const winner = winColor === "white" ? room.name : room.opponent;
+            const loser = winColor === "white" ? room.opponent : room.name;
+            if (winner && loser) await db.ref("rooms/" + roomid).update({ winner, loser, status: "finished" });
+          }
+        } else if (checkmate("black")) {
+          const roomSnap = await db.ref("rooms/" + roomid).once("value");
+          const room = roomSnap.val();
+          if (room && room.status !== "finished") {
+            await db.ref("rooms/" + roomid).update({ winner: room.name, loser: room.opponent, status: "finished" });
+          }
+        }
+        return;
+      }
+
+      if (!target && !foundEnemy) {
+        await moveExecute();
+        return;
+      }
+
+      selected = null;
+      ghostMoves = [];
+      render();
+    }
+
+    async function listenClockLoop() {
+      while (true) {
+        try { await refreshRoomAndClocks(); } catch (e) {}
+        await new Promise(r => setTimeout(r, 1000));
       }
     }
-  }
-  return moves;
-}
 
+    document.getElementById("match-button").onclick = findAndMatch;
+    document.getElementById("cancel-match").onclick = async () => {
+      if (!roomid) {
+        location.reload();
+        return;
+      }
+      await leaveRoomAndGoHome();
+    };
+    document.getElementById("back-button").onclick = async () => {
+      if (!roomid) {
+        history.back();
+        return;
+      }
+      document.getElementById("resign-modal").classList.remove("hidden");
+    };
 
+    document.getElementById("resign-button").onclick = () => document.getElementById("resign-modal").classList.remove("hidden");
+    document.getElementById("resign-no").onclick = () => document.getElementById("resign-modal").classList.add("hidden");
+    document.getElementById("resign-yes").onclick = async () => {
+      document.getElementById("resign-modal").classList.add("hidden");
+      await leaveRoomAndGoHome();
+    };
 
-
-function applyMove(boardState, move) {
-  const [fr, fc] = move.from;
-  const [tr, tc] = move.to;
-  const piece = boardState[fr][fc];
-  const dx = tc - fc;
-  const dy = tr - fr;
-  const newDie = moveDie(piece, dx, dy);
-  boardState[tr][tc] = { ...piece, ...newDie };
-  boardState[fr][fc] = null;
-  return boardState;
-}
-
-
-
-
-function checkmate(color) {
-  if (!isInCheck(color)) return false; // まずチェックでなければ詰みでない
-
-  const moves = generateMoves(color, state);
-  for (const move of moves) {
-    const newBoard = applyMove(cloneBoard(state), move);
-    if (!isInCheckAfterMove(color, newBoard)) {
-      return false; // 逃げ道があるなら詰みではない
+    async function init() {
+      document.getElementById("playerName").innerText = myname;
+      document.getElementById("matching-playerName").innerText = myname;
+      document.getElementById("playerRate").innerText = "1200";
+      document.getElementById("matching-playerRate").innerText = "1200";
+      setupBoard();
+      try {
+        const mySnap = await db2.collection("users").where("name", "==", myname).get();
+        if (!mySnap.empty) {
+          const rate = mySnap.docs[0].data().rate || 1500;
+          myRateLoaded = rate;
+          document.getElementById("my-rate").innerText = rate;
+          document.getElementById("playerRate").innerText = rate;
+          document.getElementById("matching-playerRate").innerText = rate;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+      setInterval(refreshRoomAndClocks, 1000);
     }
-  }
-  return true; // 全ての合法手を試してもチェック回避できなければ詰み
-}
-setup();
-</script>
 
+    init();
+  </script>
 </body>
 </html>
