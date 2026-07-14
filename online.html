@@ -535,7 +535,7 @@
     <div class="info-box">
       <div class="info-row"><span>⏱ Time</span><span>10 min</span></div>
       <div class="info-row"><span>🌍 Online</span><span id="online-count">0</span></div>
-      <div class="info-row"><span>⌛ Wait</span><span>&lt;10 sec</span></div>
+      <div class="info-row"><span>⌛ Wait</span><span id="wait-estimate">--</span></div>
     </div>
 
     <button id="back-button" class="back-link">← BACK</button>
@@ -635,7 +635,9 @@
     let presenceRef = null;
     let connectedRef = null;
     let presenceCountRef = null;
+    let roomsCountRef = null;
     let presenceInitialized = false;
+    let statsInitialized = false;
 
     const params = new URLSearchParams(location.search);
     let myname = params.get("myname") || `Guest_${Math.floor(Math.random() * 1000)}`;
@@ -689,6 +691,43 @@
       if (el) el.textContent = String(count);
     }
 
+    function updateWaitEstimate(waitingCount, onlineCount) {
+      const el = document.getElementById("wait-estimate");
+      if (!el) return;
+
+      let label = "--";
+      if (waitingCount <= 0) {
+        label = onlineCount > 0 ? "~30 sec" : "--";
+      } else if (waitingCount === 1) {
+        label = "<10 sec";
+      } else if (waitingCount === 2) {
+        label = "10-20 sec";
+      } else if (waitingCount <= 4) {
+        label = "20-40 sec";
+      } else if (waitingCount <= 8) {
+        label = "40-80 sec";
+      } else {
+        label = `~${Math.min(99, waitingCount * 10)} sec`;
+      }
+
+      el.textContent = label;
+    }
+
+    function startMatchStats() {
+      if (statsInitialized) return;
+      statsInitialized = true;
+
+      roomsCountRef = db.ref("rooms");
+      roomsCountRef.on("value", (snap) => {
+        const rooms = snap.val() || {};
+        const roomList = Object.values(rooms);
+        const onlineEl = document.getElementById("online-count");
+        const onlineCount = onlineEl ? parseInt(onlineEl.textContent || "0", 10) || 0 : 0;
+        const waitingCount = roomList.filter((room) => room && room.status === "waiting" && room.name).length;
+        updateWaitEstimate(waitingCount, onlineCount);
+      });
+    }
+
     function startOnlinePresence() {
       if (presenceInitialized) return;
       presenceInitialized = true;
@@ -709,7 +748,16 @@
 
       presenceCountRef.on("value", (snap) => {
         const users = snap.val() || {};
-        updateOnlineCount(Object.keys(users).length);
+        const onlineCount = Object.keys(users).length;
+        updateOnlineCount(onlineCount);
+
+        if (roomsCountRef) {
+          roomsCountRef.once("value").then((roomSnap) => {
+            const rooms = roomSnap.val() || {};
+            const waitingCount = Object.values(rooms).filter((room) => room && room.status === "waiting" && room.name).length;
+            updateWaitEstimate(waitingCount, onlineCount);
+          }).catch(() => {});
+        }
       });
     }
 
@@ -1773,6 +1821,7 @@
       document.getElementById("playerRate").innerText = "1200";
       document.getElementById("matching-playerRate").innerText = "1200";
       setupBoard();
+      startMatchStats();
       startOnlinePresence();
       try {
         const mySnap = await db2.collection("users").where("name", "==", myname).get();
