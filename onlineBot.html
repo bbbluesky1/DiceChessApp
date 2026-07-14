@@ -174,6 +174,15 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 24px;
+      line-height: 1;
+      object-fit: none;
+    }
+
+    .emoji-avatar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 1.55rem;
       line-height: 1;
       font-family: "Segoe UI Emoji", "Apple Color Emoji", system-ui, sans-serif;
@@ -322,34 +331,7 @@
       outline-offset: 1px;
     }
 
-    #replay-controls {
-      margin: 8px auto 0;
-      max-width: 420px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-      background: rgba(255, 255, 255, 0.82);
-      color: #000;
-      padding: 10px;
-      border-radius: 12px;
-    }
-
     .hidden { display: none!important; }
-
-    #replay-controls button {
-      flex: 1;
-      padding: 10px;
-      font-size: 1rem;
-      cursor: pointer;
-      max-width: 140px;
-    }
-
-    #replay-controls p {
-      margin: 0.3rem 0 0;
-      font-size: 0.9rem;
-    }
 
     .ghost-wrapper {
       opacity: 0.5;
@@ -474,11 +456,6 @@
 
     .modal-content button:hover { background: #3367d6; }
 
-    /* OKボタンを消してもモーダルを閉じられるように、戻るボタンは常時見えるようにする */
-    #match-button {
-      display: inline-block !important;
-    }
-
     #resign-modal .modal-content button {
       margin: 10px 8px 0;
       min-width: 90px;
@@ -528,6 +505,10 @@
         border-radius: 11px;
       }
 
+      .emoji-avatar {
+        font-size: 21px;
+      }
+
       .player-name-line,
       #robot-name,
       #player-name {
@@ -551,14 +532,6 @@
 
       #resign-button {
         width: min(100%, 280px);
-        font-size: 1rem;
-      }
-
-      #replay-controls {
-        width: 100%;
-      }
-
-      #replay-controls button {
         font-size: 1rem;
       }
 
@@ -629,14 +602,6 @@
     </div>
 
     <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
-
-    <div id="replay-controls" class="hidden">
-      <div id="loading-spinner" class="spinner" style="display: none;"></div>
-      <button id="prev-button" onclick="prevMove()">⏮</button>
-      <button id="next-button" onclick="nextMove()">⏭</button>
-      <p id="move-description"></p>
-      <p id="evaluation"></p>
-    </div>
   </main>
 
 
@@ -862,19 +827,14 @@ document.getElementById("resign-yes").onclick = async function () {
 };
 
 function showModal(message, finished=false) {
-
   document.getElementById("modal-message").innerText = message;
 
   const btn = document.getElementById("match-button");
+  btn.style.display = "block";
+  btn.textContent = finished ? "マッチングに戻る" : "閉じる";
+  btn.onclick = finished ? backToMatching : closeModal;
 
-  if(finished){
-    btn.style.display = "block";
-  }else{
-    btn.style.display = "none";
-  }
-
-  document.getElementById("custom-modal")
-    .classList.remove("hidden");
+  document.getElementById("custom-modal").classList.remove("hidden");
 }
 
   function closeModal() {
@@ -888,69 +848,7 @@ document.getElementById('back-button').addEventListener('click', () => {
 
 let moveHistory = []; // 棋譜保存
 
-let currentReplayIndex = -1;
-let boardStates = []; // 各局面のボード状態のスナップショット
-
-function endGame() {
-  document.getElementById("replay-controls").classList.remove("hidden");
-  prepareReplayStates(); // 後述
-}
-
-
-function renderBoard(customState) {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      const td = board.rows[r].cells[c];
-      td.classList.remove("selected");
-      td.innerHTML = "";
-
-      const piece = customState[r][c];
-      if (piece) {
-        const dice = createDiceElement(piece);
-        td.appendChild(dice);
-        console.log('top:', piece.top, 'diceRotations:', diceRotations[piece.top]);
-      }
-    }
-  }
-  
-
-  // リプレイ中はゴーストを描画しない（または必要に応じて処理を追加）
-}
-
-
-function createInitialBoard() {
-  const initialSetup = [
-    [5, 3, 3, 2, 6, 3, 3, 5],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [null, null, null, null, null, null, null, null],
-    [1, 1, 1, 1, 1, 1, 1, 1],
-    [5, 3, 3, 6, 2, 3, 3, 5]
-  ];
-
-  const board = [];
-
-  for (let i = 0; i < 8; i++) {
-    board[i] = [];
-    for (let j = 0; j < 8; j++) {
-      const value = initialSetup[i][j];
-      const player = i < 2 ? 'black' : i > 5 ? 'white' : null;
-
-      if (value == null || player == null) {
-        board[i][j] = null;
-      } else {
-        const isKing = value === 2; // キングの条件が2のときだけなら
-        board[i][j] = createPiece(value, player === 'white' ? '#fff' : '#222', player, isKing);
-      }
-    }
-  }
-
-  return board;
-}
-
-
+function endGame() {}
 
 function recordMove(player, from, to, pieceBefore, pieceAfter, captured = null) {
   moveHistory.push({
@@ -987,49 +885,6 @@ function analyzeMoves() {
   console.log("棋譜:\n" + log);
 }
 
-function prepareReplayStates() {
-  boardStates = [];
-
-  let tempBoard = createInitialBoard(); // 初期状態に戻す
-  boardStates.push(cloneBoard(tempBoard));
-
-  moveHistory.forEach((move) => {
-    applyMove(tempBoard, move); // 仮想ボードで1手ずつ再現
-    boardStates.push(cloneBoard(tempBoard));
-  });
-
-  currentReplayIndex = 0;
-  showReplayMove();
-}
-
-function cloneBoard(board) {
-  return board.map(row =>
-    row.map(piece =>
-      piece ? {
-        ...piece,
-        top: Number(piece.top),  // ここで保証
-      } : null
-    )
-  );
-}
-
-
-function applyMove(board, move) {
-  const { from, to, pieceAfter } = move;
-
-  // 新しい駒状態を再生成（反転含む）
-  const newPiece = createPiece(
-    pieceAfter.top,
-    pieceAfter.player,
-    pieceAfter.player,
-    pieceAfter.isKing
-  );
-
-  board[from.row][from.col] = null;
-  board[to.row][to.col] = newPiece;
-}
-
-
 function getMoveEvaluationMark(before, after) {
   const diff = before - after;
   if (diff >= 15) return { mark: "!!", color: "#AAF0D1" };        // パールグリーン
@@ -1048,109 +903,7 @@ function getMoveEvaluationMark(before, after) {
 
 
 
- async function showReplayMove() {
-  const spinner = document.getElementById("loading-spinner");
-  spinner.style.display = "block"; // スピナー表示
-
-  // イベントループに制御を戻して画面描画を確実に行う
-  await new Promise(resolve => setTimeout(resolve, 0));
-
-  const move = moveHistory[currentReplayIndex - 1];
-  const board = boardStates[currentReplayIndex];
-  renderBoard(board);
-
-  const desc = move
-    ? `${currentReplayIndex}. ${move.player} (${move.from[0]},${move.from[1]}) → (${move.to[0]},${move.to[1]})`
-    : "初期局面";
-  document.getElementById("move-description").innerText = desc;
-
-  const prevBoard = boardStates[currentReplayIndex - 1];
-  const currentBoard = boardStates[currentReplayIndex];
-
-  const nextPlayer = move?.player === "white" ? "black" : "white";
-
-  const depth = 3;
-  const beforeScore = evaluateBoardDeep(prevBoard, depth, true, nextPlayer);
-  const afterScore = evaluateBoardDeep(currentBoard, depth, true, nextPlayer);
-  const diff = beforeScore - afterScore;
-
-  const { mark, color } = getMoveEvaluationMark(beforeScore, afterScore);
-
-  document.getElementById("evaluation").innerText = `評価値差: ${diff} ${mark}`;
-
-  // マスにマーク表示
-  if (move) {
-    const [r, c] = move.to;
-    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-    if (cell) {
-      cell.style.position = "relative";
-      const existingMark = cell.querySelector(".eval-mark");
-      if (existingMark) existingMark.remove();
-
-      const markSpan = document.createElement("span");
-      markSpan.innerText = mark;
-      markSpan.classList.add("eval-mark");
-      markSpan.style.backgroundColor = color;
-      cell.appendChild(markSpan);
-    }
-  }
-
-  spinner.style.display = "none"; // スピナー非表示
-}
-
-
-
-async function updateBotElo(result){
-
-  const mySnap = await db2.collection("users")
-    .where("name","==",myname)
-    .get();
-
-  if(mySnap.empty){
-    console.error("ユーザーなし");
-    return "";
-  }
-
-
-  const myDoc = mySnap.docs[0];
-
-  const myRate = myDoc.data().rate || 1500;
-
-  const botRate = 1500;
-
-
-  const newRate = calculateEloRating(
-    myRate,
-    botRate,
-    result
-  );
-
-
-  await myDoc.ref.update({
-    rate:newRate
-  });
-
-
-  return `レート ${myRate} → ${newRate}`;
-}
-
-
-
-function nextMove() {
-  if (currentReplayIndex < boardStates.length - 1) {
-    currentReplayIndex++;
-    showReplayMove();
-  }
-}
-
-function prevMove() {
-  if (currentReplayIndex > 0) {
-    currentReplayIndex--;
-    showReplayMove();
-  }
-}
-
-////////////////////////////////////////////
+ ////////////////////////////////////////////
 
 
   function updateRobotMessage(message) {
