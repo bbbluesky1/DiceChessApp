@@ -128,6 +128,16 @@ header {
     body.show-menu nav {
       display: flex;
     }
+    .gm-title {
+  display: inline-block;
+  background-color: red;
+  color: white;
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  margin-left: 5px;
+  border-radius: 3px;
+}
 
   </style>
 </head>
@@ -200,9 +210,12 @@ snapshot.forEach((doc) => {
   const row = document.createElement("div");
   row.className = "player-row";
   row.innerHTML = `
-    <div class="player-name">${rank}. ${data.name}</div>
-    <div class="player-rate">${data.rate} pt</div>
-  `;
+  <div class="player-name">
+    ${rank}. ${data.name}
+    ${data.rate >= 2500 ? '<span class="gm-title"> GM</span>' : ''}
+  </div>
+  <div class="player-rate">${data.rate} pt</div>
+`;
   container.appendChild(row);
   rank++;
 });
