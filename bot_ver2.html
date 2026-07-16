@@ -249,7 +249,37 @@
       border: 1px dashed #000;
     }
 
-    #robot-area {
+    
+    table#board {
+      touch-action: none;
+    }
+
+    #trace-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 1000001;
+    }
+
+    .trace-ghost {
+      opacity: 0.55;
+      transform: scale(0.55);
+      filter: brightness(65%);
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    .trace-ghost .face {
+      border: 1px dashed #000;
+    }
+#robot-area {
       display: flex;
       align-items: center;
       gap: 16px;
@@ -303,32 +333,6 @@
       height: 0;
       border: 10px solid transparent;
       border-right-color: #fff;
-    }
-
-    table#board {
-      touch-action: none;
-    }
-
-    #trace-layer {
-      pointer-events: none;
-      z-index: 1000001;
-    }
-
-    .trace-ghost {
-      opacity: 0.55;
-      transform: scale(0.55);
-      filter: brightness(65%);
-      position: absolute;
-      width: 100%;
-      height: 100%;
-      top: 0;
-      left: 0;
-      z-index: 20;
-      pointer-events: none;
-    }
-
-    .trace-ghost .face {
-      border: 1px dashed #000;
     }
 
     @media (max-width: 768px) {
@@ -511,13 +515,13 @@
      <marker id="arrowhead"
         markerWidth="28"
         markerHeight="28"
-        refX="28"
+        refX="10"
         refY="14"
         orient="auto"
         markerUnits="userSpaceOnUse">
   <polygon points="0 0, 28 14, 0 28" fill="currentColor"/>
 </marker>
-<marker id="trace-arrowhead"
+     <marker id="trace-arrowhead"
         markerWidth="28"
         markerHeight="28"
         refX="10"
@@ -566,38 +570,13 @@ const PV = "cyan";
     let humanPlayer = "white"; // or "black"
 let botPlayer = "black";   // 自動
 let currentPlayer = "white"; // 常に白から開始
+
+
 let traceArrows = [];
 let traceGhosts = [];
 let traceSource = null;
 let traceTouchStartCell = null;
 let suppressNextClickUntil = 0;
-
-function setSide(side) {
-  humanPlayer = side;
-  botPlayer = opponent(side);
-
-  if (side === "black") {
-
-document.getElementById("board").style.transform = "rotate(180deg)";
-  } else {
-    document.getElementById("board").style.transform = "rotate(0deg)";
-    
-  }
-
-  currentPlayer = "white";
-  
-  // ★ボタン無効化
-  document.getElementById("whiteBtn").disabled = true;
-  document.getElementById("blackBtn").disabled = true;
-
-  
-  // 黒で始めるなら即bot開始
-  if (humanPlayer === "black") {
-    setTimeout(async () => {
-      await botTurn();
-    }, 300);
-  }
-}
 
 function cellKey(r, c) {
   return `${r},${c}`;
@@ -669,11 +648,9 @@ function renderTraceLayer() {
   const layer = document.getElementById("trace-layer");
   if (!layer) return;
   while (layer.firstChild) layer.removeChild(layer.firstChild);
-
   for (const arrow of traceArrows) {
     const a = getCellCenter(arrow.from[0], arrow.from[1]);
     const b = getCellCenter(arrow.to[0], arrow.to[1]);
-
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
     line.setAttribute("x1", a.x);
     line.setAttribute("y1", a.y);
@@ -692,19 +669,15 @@ function renderTraceLayer() {
 function commitTraceArrow(source, targetRow, targetCol) {
   if (!source) return false;
   if (!canTraceToCell(source.piece, source.row, source.col, targetRow, targetCol)) return false;
-
   const from = [source.row, source.col];
   const to = [targetRow, targetCol];
   const key = `${from[0]},${from[1]}->${to[0]},${to[1]}`;
-
   const dx = targetCol - source.col;
   const dy = targetRow - source.row;
   const nextPiece = { ...source.piece, ...moveDie(source.piece, dx, dy) };
-
   if (!traceArrows.some((a) => a.key === key)) {
     traceArrows.push({ from, to, key, sourceKey: source.sourceKey });
   }
-
   if (!traceGhosts.some((g) => g.r === targetRow && g.c === targetCol && g.sourceKey === source.sourceKey)) {
     traceGhosts.push({
       r: targetRow,
@@ -713,14 +686,7 @@ function commitTraceArrow(source, targetRow, targetCol) {
       sourceKey: source.sourceKey,
     });
   }
-
   return true;
-}
-
-function clearTraceLayer() {
-  traceArrows = [];
-  traceGhosts = [];
-  traceSource = null;
 }
 
 function getTouchCell(ev) {
@@ -739,7 +705,6 @@ function onBoardTouchStart(ev) {
   const cell = getTouchCell(ev);
   traceTouchStartCell = cell;
   traceSource = cell ? getSelectablePieceAt(cell.row, cell.col) : null;
-
   if (cell && isTraceSourceCell(cell.row, cell.col)) {
     clearTraceForSource(cellKey(cell.row, cell.col));
     traceSource = null;
@@ -751,23 +716,47 @@ function onBoardTouchStart(ev) {
 
 function onBoardTouchEnd(ev) {
   if (!traceSource || !traceTouchStartCell) return;
-
   const cell = getTouchCell(ev);
   if (!cell) {
     traceSource = null;
     traceTouchStartCell = null;
     return;
   }
-
   const same = traceTouchStartCell.row === cell.row && traceTouchStartCell.col === cell.col;
   if (!same) {
     const committed = commitTraceArrow(traceSource, cell.row, cell.col);
     if (committed) suppressNextClickUntil = Date.now() + 250;
   }
-
   traceSource = null;
   traceTouchStartCell = null;
   render();
+}
+
+function setSide(side) {
+  humanPlayer = side;
+  botPlayer = opponent(side);
+
+  if (side === "black") {
+
+document.getElementById("board").style.transform = "rotate(180deg)";
+  } else {
+    document.getElementById("board").style.transform = "rotate(0deg)";
+    
+  }
+
+  currentPlayer = "white";
+  
+  // ★ボタン無効化
+  document.getElementById("whiteBtn").disabled = true;
+  document.getElementById("blackBtn").disabled = true;
+
+  
+  // 黒で始めるなら即bot開始
+  if (humanPlayer === "black") {
+    setTimeout(async () => {
+      await botTurn();
+    }, 300);
+  }
 }
 
   function showModal(message) {
@@ -1416,12 +1405,9 @@ function render() {
     }
   }
 
-  // ゴースト描画
-  console.log(`Ghost moves: `, ghostMoves);
   ghostMoves.forEach(({ r, c, piece }) => {
     const td = board.rows[r].cells[c];
     const ghost = createDiceElement(piece, true);
-    console.log(`Appending ghost to cell at [${r}, ${c}]`);
     td.appendChild(ghost);
   });
 
@@ -1533,7 +1519,6 @@ async function onCellClick(e) {
         ghostMoves = [];
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
-        //clearTraceLayer();
         render();
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player=== 'black') {
           showModal("White wins!");
@@ -1581,7 +1566,6 @@ async function onCellClick(e) {
         ghostMoves = [];
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
-        //clearTraceLayer();
         render();
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player === 'black') {
           showModal("White wins!");
@@ -1610,7 +1594,6 @@ async function onCellClick(e) {
     state[row][col] = { ...piece, ...newDie };
     state[sr][sc] = null;
     recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
-    //clearTraceLayer();
     ghostMoves = [];
     selected = null;
     render();
@@ -1761,32 +1744,40 @@ function repetitionCount(board) {
 function evaluateBoard(board, perspective) {
 
   let score = 0;
-  
-  if (kingInDanger(board, perspective))
-  score -= 5000;
+
+  if (kingInDanger(board, perspective)) {
+    score -= 5000;
+  }
 
   const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
 
+  const enemy = perspective === "white" ? "black" : "white";
+  const enemyPieces = countPieces(board, enemy);
+  const endgame = enemyPieces <= 7;
+
+  // -------------------------
+  // ① ピース評価
+  // -------------------------
   for (let r = 0; r < 8; r++) {
     for (let c = 0; c < 8; c++) {
+
       const piece = board[r][c];
       if (!piece) continue;
 
       let value = 100;
-if (piece.isKing) {
-    value += 10000;
 
-    if (piece.top === 1)
-        value += 3000;
-}
+      if (piece.isKing) {
+        value += 10000;
+        if (piece.top === 1) value += 3000;
+      }
+
       let mobility = 0;
       let attackBonus = 0;
 
-      // -------------------------
-      // ① 機動力（超重要）
-      // -------------------------
+      // 機動力
       for (const [dr, dc] of dirs) {
         for (let dist = 1; dist <= piece.top; dist++) {
+
           const nr = r + dr * dist;
           const nc = c + dc * dist;
 
@@ -1795,32 +1786,24 @@ if (piece.isKing) {
           const target = board[nr][nc];
 
           if (!target) {
-            mobility += 1; // 空マス = 動ける
+            mobility += 1;
           } else {
             if (target.player !== piece.player) {
-              attackBonus += (10 + target.top) * 0.4; // 攻撃性
+              attackBonus += (10 + target.top) * 0.4;
             }
             break;
           }
         }
       }
-    
 
-      // 機動力をかなり重視
       value += mobility * 0.5;
-
-      
       value += attackBonus * 2 * (mobility > 0 ? 0.7 : 0.3);
 
-      // -------------------------
-      // ② 前進ボーナス（控えめ）
-      // -------------------------
       const forward = (piece.player === "white") ? (7 - r) : r;
       value += forward * 0.2;
-
-      // -------------------------
-      // ③ 合計反映
-      // -------------------------
+ if (!endgame) {
+      value += evaluatePiece(piece, r, c, perspective);
+};
       if (piece.player === perspective) {
         score += value;
       } else {
@@ -1828,38 +1811,117 @@ if (piece.isKing) {
       }
     }
   }
-  
-  score += evaluateForks(board, perspective);
-  score -= evaluateForks(
-   board,
-    perspective === "white" ? "black" : "white"
-  );
-  
-  /*
-  score += evaluateSafeCaptures(board, perspective);
-  score -= evaluateSafeCaptures(
-   board,
-    perspective === "white" ? "black" : "white"
-  );
-  */
-  
-  score += evaluatePieceCount(board, perspective);
-  score -= evaluatePieceCount(
-   board,
-    perspective === "white" ? "black" : "white"
-  );
-  
-  
- if (checkmate(perspective === "white" ? "black" : "white",board)) score +=10000;
- 
-const myMoves = generateMoves(perspective, board).length;
-const enemyMoves = generateMoves(opponent(perspective), board).length;
 
-score += 500 * (myMoves - enemyMoves);
+  // -------------------------
+  // ② 中盤評価（dice系）
+  // -------------------------
+  if (!endgame) {
+    score += evaluateForks(board, perspective);
+    score -= evaluateForks(board, enemy);
+
+    score += evaluatePieceCount(board, perspective);
+    score -= evaluatePieceCount(board, enemy);
+  }
+
+  // -------------------------
+  // ③ メイト評価
+  // -------------------------
+  if (checkmate(enemy, board)) {
+    score += 10000;
+  }
+
+  // -------------------------
+  // ④ エンドゲーム評価
+  // -------------------------
+  if (endgame) {
+
+    const kp = kingPos(board, enemy);
+
+    if (kp) {
+      const [kr, kc] = kp;
+      const dist = cornerDistance(kr, kc);
+      score += (10 - dist) * 2000;
+    }
+
+    const enemyKingMoves = generateMoves(enemy, board).length;
+    score += (5 - enemyKingMoves) * 3000;
+  }
+
+  return score;
+}
+
+
+function countPieces(board, player) {
+  let count = 0;
+
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const piece = board[r][c];
+
+      if (piece && piece.player === player) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
  
- return score
- };
+ function kingPos(board, color) {
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const p = board[r][c];
+      if (p?.isKing && p.player === color) return [r, c];
+    }
+  }
+  return null;
+}
+
+function cornerDistance(r, c) {
+  const corners = [
+    [0,0], [0,7], [7,0], [7,7]
+  ];
+
+  return Math.min(...corners.map(([cr, cc]) =>
+    Math.abs(r - cr) + Math.abs(c - cc)
+  ));
+}
  
+ const evalTableByDice = {
+
+  1: [
+
+    [30, 30, 30, 30, 30, 30, 30, 30],
+
+    [20, 20, 20, 20, 20, 20, 20, 20],
+
+    [10, 10, 10, 10, 10, 10, 10, 10],
+
+    [0,0, 0, 0, 0 ,0, 0, 0],
+
+     [0,0, 0, 0, 0 ,0, 0, 0],
+
+    [0,0, 0, 0, 0 ,0, 0, 0],
+
+ [0,0, 0, 0, 0 ,0, 0, 0],
+
+ [0,0, 0, 0, 0 ,0, 0, 0],
+
+  ]
+
+};
+
+
+ function evaluatePiece(piece, r, c, player) {
+ if (piece.top !== 1) return 0;
+  const table = evalTableByDice[piece.top];
+  
+  const row = (piece.player === "black") ? 7 - r : r;
+
+  return table[r][c];
+}
+
  function evaluateSafeCaptures(board, player) {
   let score = 0;
 
@@ -2934,7 +2996,6 @@ return structuredClone(displayedMove ?? bestMove);
     state[fr][fc] = null;
     // 棋譜記録
     recordMove(currentPlayer, [fr, fc], [tr, tc], piece, newDie);
-    //clearTraceLayer();
     render();
     clearUIArrow();
   clearPVArrow();
