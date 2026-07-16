@@ -1168,6 +1168,19 @@ function clearTraceForSource(sourceKey) {
   }
 }
 
+function isTraceSourceCell(row, col) {
+  const key = cellKey(row, col);
+  return traceArrows.some((a) => a.sourceKey === key) || traceGhosts.some((g) => g.sourceKey === key);
+}
+
+function clearTraceForSource(sourceKey) {
+  traceArrows = traceArrows.filter((a) => a.sourceKey !== sourceKey);
+  traceGhosts = traceGhosts.filter((g) => g.sourceKey !== sourceKey);
+  if (traceSource && traceSource.sourceKey === sourceKey) {
+    traceSource = null;
+  }
+}
+
 function getCellFromPoint(x, y) {
   const el = document.elementFromPoint(x, y);
   const td = el?.closest?.("td");
@@ -1309,12 +1322,12 @@ function onBoardTouchStart(ev) {
   traceTouchStartCell = cell;
   traceSource = cell ? getSelectablePieceAt(cell.row, cell.col) : null;
 
-  if (traceSource && traceArrows.some((a) => a.sourceKey === traceSource.sourceKey)) {
-    clearTraceForSource(traceSource.sourceKey);
+  if (cell && isTraceSourceCell(cell.row, cell.col)) {
+    clearTraceForSource(cellKey(cell.row, cell.col));
     traceSource = null;
     traceTouchStartCell = null;
     render();
-    ev.preventDefault();
+    if (ev.cancelable) ev.preventDefault();
   }
 }
 
@@ -1333,7 +1346,6 @@ function onBoardTouchEnd(ev) {
     const committed = commitTraceArrow(traceSource, cell.row, cell.col);
     if (committed) {
       suppressNextClickUntil = Date.now() + 250;
-      ev.preventDefault();
     }
   }
 
@@ -1384,6 +1396,15 @@ async function onCellClick(e) {
   const row = parseInt(e.currentTarget.dataset.row);
   const col = parseInt(e.currentTarget.dataset.col);
   const cell = state[row][col];
+
+  if (isTraceSourceCell(row, col)) {
+    clearTraceForSource(cellKey(row, col));
+    selected = null;
+    ghostMoves = [];
+    render();
+    return;
+  }
+
   ghostMoves = getGhostMoves(selected, row, col);
   render();
 
@@ -1399,6 +1420,17 @@ async function onCellClick(e) {
     const [sr, sc] = selected;
     const piece = state[sr][sc];
     const target = state[row][col];
+    const tappedGhost = traceGhosts.find((g) => g.r === row && g.c === col);
+    const tappedSameAsSource = sr === row && sc === col;
+
+    if (tappedSameAsSource || tappedGhost) {
+      const sourceKey = tappedGhost ? tappedGhost.sourceKey : cellKey(sr, sc);
+      clearTraceChainFromSource(sourceKey);
+      selected = null;
+      ghostMoves = [];
+      render();
+      return;
+    }
 
     // 自駒がターゲットにいたら動けない
     if (target && target.player === piece.player) {
