@@ -249,6 +249,33 @@
       border: 1px dashed #000;
     }
 
+
+table#board {
+  touch-action: none;
+}
+
+#trace-layer {
+  pointer-events: none;
+  z-index: 1000001;
+}
+
+.trace-ghost {
+  opacity: 0.55;
+  transform: scale(0.55);
+  filter: brightness(65%);
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  pointer-events: none;
+}
+
+.trace-ghost .face {
+  border: 1px dashed #000;
+}
+
     #robot-area {
       display: flex;
       align-items: center;
@@ -491,6 +518,15 @@
         markerUnits="userSpaceOnUse">
   <polygon points="0 0, 28 14, 0 14" fill="currentColor"/>
 </marker>
+<marker id="trace-arrowhead"
+        markerWidth="28"
+        markerHeight="28"
+        refX="10"
+        refY="14"
+        orient="auto"
+        markerUnits="userSpaceOnUse">
+  <polygon points="0 0, 28 14, 0 28" fill="yellow"/>
+</marker>
     </defs>
 
     <!-- PV layer -->
@@ -498,6 +534,9 @@
 
     <!-- UI layer -->
     <g id="arrow-layer-ui"></g>
+
+    <!-- Trace layer -->
+    <g id="trace-layer"></g>
 
   </svg>
       <table id="board"></table>
@@ -528,6 +567,138 @@ const PV = "cyan";
     let humanPlayer = "white"; // or "black"
 let botPlayer = "black";   // 自動
 let currentPlayer = "white"; // 常に白から開始
+let traceArrows = [];
+let traceGhosts = [];
+let traceSource = null;
+let traceTouchStartCell = null;
+let suppressNextClickUntil = 0;
+
+function cellKey(r, c) {
+  return `${r},${c}`;
+}
+
+function getSelectablePieceAt(row, col) {
+  for (let i = traceGhosts.length - 1; i >= 0; i--) {
+    const ghost = traceGhosts[i];
+    if (ghost.r === row && ghost.c === col) {
+      return {
+        piece: ghost.piece,
+        row,
+        col,
+        sourceKey: cellKey(row, col),
+        isGhost: true,
+      };
+    }
+  }
+
+  const boardPiece = state[row]?.[col] || null;
+  if (boardPiece) {
+    return {
+      piece: boardPiece,
+      row,
+      col,
+      sourceKey: cellKey(row, col),
+      isGhost: false,
+    };
+  }
+
+  return null;
+}
+
+function clearTraceForSource(sourceKey) {
+  traceArrows = traceArrows.filter((a) => a.sourceKey !== sourceKey);
+  traceGhosts = traceGhosts.filter((g) => g.sourceKey !== sourceKey);
+  if (traceSource && traceSource.sourceKey === sourceKey) {
+    traceSource = null;
+  }
+}
+
+function isTraceSourceCell(row, col) {
+  const key = cellKey(row, col);
+  return traceArrows.some((a) => a.sourceKey === key) || traceGhosts.some((g) => g.sourceKey === key);
+}
+
+function canTraceToCell(piece, sr, sc, row, col) {
+  if (!piece) return false;
+  const dr = row - sr;
+  const dc = col - sc;
+  const isStraight = dr === 0 || dc === 0;
+  if (!isStraight) return false;
+  const distance = Math.max(Math.abs(dr), Math.abs(dc));
+  if (distance === 0 || distance > piece.top) return false;
+  return true;
+}
+
+function getTouchCell(ev) {
+  const touch = ev.changedTouches?.[0] || ev.touches?.[0];
+  if (!touch) return null;
+  const el = document.elementFromPoint(touch.clientX, touch.clientY);
+  const td = el?.closest?.("td");
+  if (!td) return null;
+  return {
+    row: parseInt(td.dataset.row, 10),
+    col: parseInt(td.dataset.col, 10),
+  };
+}
+
+function renderTraceLayer() {
+  const layer = document.getElementById("trace-layer");
+  if (!layer) return;
+  while (layer.firstChild) layer.removeChild(layer.firstChild);
+
+  for (const arrow of traceArrows) {
+    const a = getCellCenter(arrow.from[0], arrow.from[1]);
+    const b = getCellCenter(arrow.to[0], arrow.to[1]);
+
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", a.x);
+    line.setAttribute("y1", a.y);
+    line.setAttribute("x2", b.x);
+    line.setAttribute("y2", b.y);
+    line.setAttribute("stroke", "yellow");
+    line.setAttribute("stroke-opacity", "0.35");
+    line.setAttribute("opacity", "0.35");
+    line.setAttribute("stroke-width", "10");
+    line.setAttribute("stroke-linecap", "round");
+    line.setAttribute("marker-end", "url(#trace-arrowhead)");
+    layer.appendChild(line);
+  }
+}
+
+function commitTraceArrow(source, targetRow, targetCol) {
+  if (!source) return false;
+  if (!canTraceToCell(source.piece, source.row, source.col, targetRow, targetCol)) return false;
+
+  const from = [source.row, source.col];
+  const to = [targetRow, targetCol];
+  const key = `${from[0]},${from[1]}->${to[0]},${to[1]}`;
+
+  const dx = targetCol - source.col;
+  const dy = targetRow - source.row;
+  const nextPiece = { ...source.piece, ...moveDie(source.piece, dx, dy) };
+
+  if (!traceArrows.some((a) => a.key === key)) {
+    traceArrows.push({ from, to, key, sourceKey: source.sourceKey });
+  }
+
+  if (!traceGhosts.some((g) => g.r === targetRow && g.c === targetCol && g.sourceKey === source.sourceKey)) {
+    traceGhosts.push({
+      r: targetRow,
+      c: targetCol,
+      piece: nextPiece,
+      sourceKey: source.sourceKey,
+    });
+  }
+
+  return true;
+}
+
+function clearTraceLayer() {
+  traceArrows = [];
+  traceGhosts = [];
+  traceSource = null;
+  traceTouchStartCell = null;
+}
 
 function setSide(side) {
   humanPlayer = side;
@@ -601,6 +772,41 @@ function renderBoard(customState) {
   // リプレイ中はゴーストを描画しない（または必要に応じて処理を追加）
 }
 
+
+function onBoardTouchStart(ev) {
+  const cell = getTouchCell(ev);
+  traceTouchStartCell = cell;
+  traceSource = cell ? getSelectablePieceAt(cell.row, cell.col) : null;
+
+  if (cell && isTraceSourceCell(cell.row, cell.col)) {
+    clearTraceForSource(cellKey(cell.row, cell.col));
+    traceSource = null;
+    traceTouchStartCell = null;
+    render();
+    if (ev.cancelable) ev.preventDefault();
+  }
+}
+
+function onBoardTouchEnd(ev) {
+  if (!traceSource || !traceTouchStartCell) return;
+
+  const cell = getTouchCell(ev);
+  if (!cell) {
+    traceSource = null;
+    traceTouchStartCell = null;
+    return;
+  }
+
+  const same = traceTouchStartCell.row === cell.row && traceTouchStartCell.col === cell.col;
+  if (!same) {
+    const committed = commitTraceArrow(traceSource, cell.row, cell.col);
+    if (committed) suppressNextClickUntil = Date.now() + 250;
+  }
+
+  traceSource = null;
+  traceTouchStartCell = null;
+  render();
+}
 
 function createInitialBoard() {
   const initialSetup = [
@@ -940,6 +1146,8 @@ function setup() {
       td.dataset.col = c;
       td.className = (r + c) % 2 === 0 ? "white" : "black";
       td.addEventListener("click", onCellClick);
+      td.addEventListener("touchstart", onBoardTouchStart, { passive: false });
+      td.addEventListener("touchend", onBoardTouchEnd, { passive: false });
       tr.appendChild(td);
       row.push(null);
     }
@@ -1209,13 +1417,31 @@ ghostMoves.forEach(({ r, c, piece }) => {
   td.appendChild(ghost);
 });
 
+  traceGhosts.forEach(({ r, c, piece }) => {
+    const td = board.rows[r]?.cells[c];
+    if (!td) return;
+    const ghost = createDiceElement(piece, true);
+    ghost.classList.add("trace-ghost");
+    td.appendChild(ghost);
+  });
 
+  renderTraceLayer();
 }
 
 async function onCellClick(e) {
+  if (typeof suppressNextClickUntil !== "undefined" && Date.now() < suppressNextClickUntil) return;
   const row = parseInt(e.currentTarget.dataset.row);
   const col = parseInt(e.currentTarget.dataset.col);
   const cell = state[row][col];
+
+  if (isTraceSourceCell(row, col)) {
+    clearTraceForSource(cellKey(row, col));
+    selected = null;
+    ghostMoves = [];
+    render();
+    return;
+  }
+
   ghostMoves = getGhostMoves(selected, row, col);
   render();
 
