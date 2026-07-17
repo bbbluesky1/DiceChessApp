@@ -23,11 +23,14 @@
     .dc{all:initial;display:block;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111}
     .dc *{box-sizing:border-box}
     .dc-wrap{display:grid;gap:10px;max-width:100%}
-    .dc-board-wrap{width:min(92vw,420px);aspect-ratio:1/1;position:relative}
-    .dc-board{width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);border:1px solid rgba(0,0,0,.2);overflow:hidden}
+    .dc-board-wrap{width:min(92vw,420px);aspect-ratio:1/1;position:relative;margin:0 auto}
+    .dc-board{width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);border:1px solid rgba(0,0,0,.22);overflow:hidden;position:relative;z-index:1}
+    .dc-arrow-layer{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:visible}
+    .dc-arrow-line{stroke:rgba(30,90,255,.55);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;fill:none}
+    .dc-arrow-head{fill:rgba(30,90,255,.55)}
     .dc-cell{position:relative;display:flex;align-items:center;justify-content:center;overflow:hidden}
-    .dc-light{background:rgba(235,236,208,.94)}
-    .dc-dark{background:rgba(177,177,177,.94)}
+    .dc-light{background:rgba(245,240,229,.98)}
+    .dc-dark{background:rgba(178,118,58,.98)}
     .dc-selected{outline:3px solid rgba(255,215,0,.9);outline-offset:-3px}
     .dc-piece{width:88%;height:88%;position:relative;transform-style:preserve-3d;transform-origin:center;border-radius:8px}
     .dc-face{position:absolute;width:100%;height:100%;border:1px solid rgba(0,0,0,.25);display:flex;flex-wrap:wrap;align-items:center;justify-content:center;backface-visibility:hidden}
@@ -38,15 +41,10 @@
     .dc-left{transform:rotateY(-90deg) translateZ(15px)}
     .dc-top{transform:rotateX(90deg) translateZ(15px)}
     .dc-bottom{transform:rotateX(-90deg) translateZ(15px)}
-    .dc-controls{display:grid;gap:8px;padding:10px;border:1px solid rgba(0,0,0,.12);border-radius:14px;background:transparent}
+    .dc-controls{display:grid;gap:8px;padding:10px;border:1px solid rgba(0,0,0,.12);border-radius:14px;background:transparent;width:min(92vw,420px);margin:0 auto}
     .dc-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
     .dc-btn{appearance:none;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.92);color:#111;border-radius:999px;padding:8px 12px;font-size:14px;line-height:1;cursor:pointer;user-select:none}
     .dc-btn:disabled{opacity:.45;cursor:not-allowed}
-    .dc-input{width:100%;min-height:64px;border:1px solid rgba(0,0,0,.2);border-radius:10px;padding:8px;resize:vertical;background:rgba(255,255,255,.96);color:#111;font-size:12px}
-    .dc-status,.dc-note{font-size:12px;text-align:center;word-break:break-word}
-    .dc-status{min-height:1.4em;color:rgba(0,0,0,.72)}
-    .dc-note{color:rgba(0,0,0,.62)}
-    .dc-hidden{display:none !important}
   `;
 
   function createPiece(top, player, isKing=false) {
@@ -101,7 +99,7 @@
       [1,1,1,1,1,1,1,1],
       [5,3,3,6,2,3,3,5],
     ];
-    return setup.map((row,r)=>row.map((v,c)=> {
+    return setup.map((row,r)=>row.map((v)=> {
       const p = r < 2 ? "black" : r > 5 ? "white" : null;
       return v == null || !p ? null : createPiece(v, p, v === 2);
     }));
@@ -198,50 +196,71 @@
     shadow.innerHTML = `<style>${CSS}</style>
       <div class="dc">
         <div class="dc-wrap">
-          <div class="dc-board-wrap"><div class="dc-board"></div></div>
+          <div class="dc-board-wrap">
+            <svg class="dc-arrow-layer" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div class="dc-board"></div>
+          </div>
           <div class="dc-controls">
             <div class="dc-row">
               <button type="button" class="dc-btn dc-prev">⏮</button>
               <button type="button" class="dc-btn dc-play">▶</button>
               <button type="button" class="dc-btn dc-next">⏭</button>
             </div>
-            <div class="dc-row">
-              <textarea class="dc-input" placeholder="W:e2-e4;B:e7-e5;W:d2-d4"></textarea>
-            </div>
-            <div class="dc-row">
-              <button type="button" class="dc-btn dc-load">棋譜を読む</button>
-            </div>
-            <div class="dc-status"></div>
-            <div class="dc-note"></div>
           </div>
         </div>
       </div>`;
 
     const boardEl = shadow.querySelector(".dc-board");
+    const arrowEl = shadow.querySelector(".dc-arrow-layer");
     const prevBtn = shadow.querySelector(".dc-prev");
     const playBtn = shadow.querySelector(".dc-play");
     const nextBtn = shadow.querySelector(".dc-next");
-    const loadBtn = shadow.querySelector(".dc-load");
-    const inputEl = shadow.querySelector(".dc-input");
-    const statusEl = shadow.querySelector(".dc-status");
-    const noteEl = shadow.querySelector(".dc-note");
+
     const defaultKifu = host.getAttribute("data-kifu") || host.dataset.kifu || "";
-
-    inputEl.value = defaultKifu;
-
     let states = [initialBoard()];
     let meta = [];
     let idx = 0;
     let timer = null;
     let playing = false;
+    const intervalMs = Math.max(120, Number(host.getAttribute("data-speed") || host.dataset.speed || 700));
+
+    function clearArrows() {
+      arrowEl.innerHTML = "";
+    }
+
+    function drawArrow(from, to) {
+      clearArrows();
+      if (!from || !to) return;
+      const x1 = from.col * 100 + 50;
+      const y1 = from.row * 100 + 50;
+      const x2 = to.col * 100 + 50;
+      const y2 = to.row * 100 + 50;
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const len = Math.hypot(dx, dy) || 1;
+      const shrink = 32;
+      const sx = x1 + (dx / len) * 10;
+      const sy = y1 + (dy / len) * 10;
+      const ex = x2 - (dx / len) * shrink;
+      const ey = y2 - (dy / len) * shrink;
+
+      arrowEl.innerHTML = `
+        <defs>
+          <marker id="dc-arrow-head" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+            <path class="dc-arrow-head" d="M0,0 L8,4 L0,8 z"></path>
+          </marker>
+        </defs>
+        <line class="dc-arrow-line" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" marker-end="url(#dc-arrow-head)"></line>
+      `;
+    }
 
     function refresh() {
       renderBoard(boardEl, states[idx]);
       prevBtn.disabled = idx <= 0;
       nextBtn.disabled = idx >= states.length - 1;
       playBtn.textContent = playing ? "⏸" : "▶";
-      statusEl.textContent = idx === 0 ? "初期局面" : `${idx}. ${meta[idx - 1].text}`;
-      noteEl.textContent = inputEl.value.trim() ? `棋譜: ${inputEl.value.trim()}` : "";
+      if (idx > 0 && meta[idx - 1]) drawArrow(meta[idx - 1].from, meta[idx - 1].to);
+      else clearArrows();
     }
 
     function stop() {
@@ -259,7 +278,7 @@
         if (idx >= states.length - 1) { stop(); return; }
         idx += 1;
         refresh();
-      }, 700);
+      }, intervalMs);
     }
 
     function load(kifu) {
@@ -274,18 +293,12 @@
     prevBtn.onclick = () => { if (idx > 0) { idx -= 1; refresh(); } };
     nextBtn.onclick = () => { if (idx < states.length - 1) { idx += 1; refresh(); } };
     playBtn.onclick = () => playing ? stop() : play();
-    loadBtn.onclick = () => {
-      try { load(inputEl.value.trim()); }
-      catch (e) { statusEl.textContent = `棋譜を読み込めませんでした: ${e.message}`; }
-    };
-
     try {
-      if (inputEl.value.trim()) load(inputEl.value.trim());
+      if (defaultKifu.trim()) load(defaultKifu.trim());
       else refresh();
     } catch (e) {
-      statusEl.textContent = `棋譜を読み込めませんでした: ${e.message}`;
-      noteEl.textContent = "";
       renderBoard(boardEl, initialBoard());
+      stop();
     }
 
     host._dicechess = { load, play, stop };
