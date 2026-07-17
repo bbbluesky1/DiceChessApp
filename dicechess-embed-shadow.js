@@ -23,7 +23,7 @@
     .dc{all:initial;display:block;box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#111}
     .dc *{box-sizing:border-box}
     .dc-wrap{display:grid;gap:10px;max-width:100%}
-    .dc-board-wrap{width:min(92vw,420px);aspect-ratio:1/1;position:relative;margin:0 auto}
+    .dc-board-wrap{width:min(92vw,var(--dc-size,420px));aspect-ratio:1/1;position:relative;margin:0 auto}
     .dc-board{width:100%;height:100%;display:grid;grid-template-columns:repeat(8,1fr);border:1px solid rgba(0,0,0,.22);overflow:hidden;position:relative;z-index:1}
     .dc-arrow-layer{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:visible}
     .dc-arrow-line{stroke:rgba(30,90,255,.55);stroke-width:7;stroke-linecap:round;stroke-linejoin:round;fill:none}
@@ -41,7 +41,7 @@
     .dc-left{transform:rotateY(-90deg) translateZ(15px)}
     .dc-top{transform:rotateX(90deg) translateZ(15px)}
     .dc-bottom{transform:rotateX(-90deg) translateZ(15px)}
-    .dc-controls{display:grid;gap:8px;padding:10px;border:1px solid rgba(0,0,0,.12);border-radius:14px;background:transparent;width:min(92vw,420px);margin:0 auto}
+    .dc-controls{display:grid;gap:8px;padding:10px;border:1px solid rgba(0,0,0,.12);border-radius:14px;background:transparent;width:min(92vw,var(--dc-size,420px));margin:0 auto}
     .dc-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
     .dc-btn{appearance:none;border:1px solid rgba(0,0,0,.18);background:rgba(255,255,255,.92);color:#111;border-radius:999px;padding:8px 12px;font-size:14px;line-height:1;cursor:pointer;user-select:none}
     .dc-btn:disabled{opacity:.45;cursor:not-allowed}
@@ -197,7 +197,7 @@
       <div class="dc">
         <div class="dc-wrap">
           <div class="dc-board-wrap">
-            <svg class="dc-arrow-layer" viewBox="0 0 800 800" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <svg class="dc-arrow-layer" preserveAspectRatio="none" aria-hidden="true"></svg>
             <div class="dc-board"></div>
           </div>
           <div class="dc-controls">
@@ -210,11 +210,24 @@
         </div>
       </div>`;
 
+    const boardWrapEl = shadow.querySelector(".dc-board-wrap");
     const boardEl = shadow.querySelector(".dc-board");
     const arrowEl = shadow.querySelector(".dc-arrow-layer");
     const prevBtn = shadow.querySelector(".dc-prev");
     const playBtn = shadow.querySelector(".dc-play");
     const nextBtn = shadow.querySelector(".dc-next");
+
+    const widthAttr = Number(host.getAttribute("width") || host.dataset.width || 420);
+    const heightAttr = Number(host.getAttribute("height") || host.dataset.height || widthAttr);
+    const controlsEl = shadow.querySelector(".dc-controls");
+
+    boardWrapEl.style.setProperty("--dc-size", `${widthAttr}px`);
+    boardWrapEl.style.width = `${widthAttr}px`;
+    boardWrapEl.style.height = `${heightAttr}px`;
+    boardWrapEl.style.aspectRatio = heightAttr === widthAttr ? "1 / 1" : "auto";
+    controlsEl.style.setProperty("--dc-size", `${widthAttr}px`);
+    controlsEl.style.width = `${widthAttr}px`;
+    arrowEl.setAttribute("viewBox", `0 0 ${widthAttr} ${heightAttr}`);
 
     const defaultKifu = host.getAttribute("data-kifu") || host.dataset.kifu || "";
     let states = [initialBoard()];
@@ -231,23 +244,26 @@
     function drawArrow(from, to) {
       clearArrows();
       if (!from || !to) return;
-      const x1 = from.col * 100 + 50;
-      const y1 = from.row * 100 + 50;
-      const x2 = to.col * 100 + 50;
-      const y2 = to.row * 100 + 50;
+      const cellW = widthAttr / 8;
+      const cellH = heightAttr / 8;
+      const x1 = from.col * cellW + cellW / 2;
+      const y1 = from.row * cellH + cellH / 2;
+      const x2 = to.col * cellW + cellW / 2;
+      const y2 = to.row * cellH + cellH / 2;
       const dx = x2 - x1;
       const dy = y2 - y1;
       const len = Math.hypot(dx, dy) || 1;
-      const shrink = 32;
-      const sx = x1 + (dx / len) * 10;
-      const sy = y1 + (dy / len) * 10;
+      const shrink = Math.max(10, Math.min(cellW, cellH) * 0.16);
+      const head = Math.max(3, Math.min(cellW, cellH) * 0.05);
+      const sx = x1 + (dx / len) * head;
+      const sy = y1 + (dy / len) * head;
       const ex = x2 - (dx / len) * shrink;
       const ey = y2 - (dy / len) * shrink;
 
       arrowEl.innerHTML = `
         <defs>
-          <marker id="dc-arrow-head" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path class="dc-arrow-head" d="M0,0 L8,4 L0,8 z"></path>
+          <marker id="dc-arrow-head" markerWidth="5" markerHeight="5" refX="4.2" refY="2.5" orient="auto" markerUnits="strokeWidth">
+            <path class="dc-arrow-head" d="M0,0 L5,2.5 L0,5 z"></path>
           </marker>
         </defs>
         <line class="dc-arrow-line" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}" marker-end="url(#dc-arrow-head)"></line>
