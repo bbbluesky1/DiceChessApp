@@ -790,6 +790,7 @@ let moveHistory = []; // 棋譜保存
 
 let currentReplayIndex = -1;
 let boardStates = []; // 各局面のボード状態のスナップショット
+let replayEvaluationHistory = []; // 各局面の白%/黒%スナップショット
 
 function endGame() {
   document.getElementById("replay-controls").classList.remove("hidden");
@@ -952,7 +953,6 @@ function getMoveEvaluationMark(before, after) {
   const spinner = document.getElementById("loading-spinner");
   spinner.style.display = "block"; // スピナー表示
 
-  // イベントループに制御を戻して画面描画を確実に行う
   await new Promise(resolve => setTimeout(resolve, 0));
 
   const move = moveHistory[currentReplayIndex - 1];
@@ -964,36 +964,12 @@ function getMoveEvaluationMark(before, after) {
     : "初期局面";
   document.getElementById("move-description").innerText = desc;
 
-  const prevBoard = boardStates[currentReplayIndex - 1];
-  const currentBoard = boardStates[currentReplayIndex];
-
-  const nextPlayer = move?.player === "white" ? "black" : "white";
-
-  const depth = 3;
-  const beforeScore = evaluateBoardDeep(prevBoard, depth, true, nextPlayer);
-  const afterScore = evaluateBoardDeep(currentBoard, depth, true, nextPlayer);
-  const diff = beforeScore - afterScore;
-
-  const { mark, color } = getMoveEvaluationMark(beforeScore, afterScore);
-
-  document.getElementById("evaluation").innerText = `評価値差: ${diff} ${mark}`;
-  updateEvaluationBar(currentBoard);
-
-  // マスにマーク表示
-  if (move) {
-    const [r, c] = move.to;
-    const cell = document.querySelector(`[data-row="${r}"][data-col="${c}"]`);
-    if (cell) {
-      cell.style.position = "relative";
-      const existingMark = cell.querySelector(".eval-mark");
-      if (existingMark) existingMark.remove();
-
-      const markSpan = document.createElement("span");
-      markSpan.innerText = mark;
-      markSpan.classList.add("eval-mark");
-      markSpan.style.backgroundColor = color;
-      cell.appendChild(markSpan);
-    }
+  const snapshot = replayEvaluationHistory[currentReplayIndex] || replayEvaluationHistory[replayEvaluationHistory.length - 1] || { whiteShare: 50, blackShare: 50 };
+  const evalBar = document.getElementById("eval-bar");
+  const scoreEl = document.getElementById("eval-score");
+  if (evalBar && scoreEl) {
+    evalBar.style.background = `linear-gradient(to top, #111 0%, #111 ${snapshot.blackShare}%, #f5f5f5 ${snapshot.blackShare}%, #f5f5f5 100%)`;
+    scoreEl.textContent = `白 ${snapshot.whiteShare.toFixed(0)}% / 黒 ${snapshot.blackShare.toFixed(0)}%`;
   }
 
   spinner.style.display = "none"; // スピナー非表示
@@ -1065,11 +1041,7 @@ function getEvaluationScore() {
   return getEvaluationPair(state, EVAL_DEPTH);
 }
 
-function updateEvaluationBar(boardState = state) {
-  const evalBar = document.getElementById("eval-bar");
-  const scoreEl = document.getElementById("eval-score");
-  if (!evalBar || !scoreEl) return;
-
+function computeEvaluationPercentSnapshot(boardState = state) {
   const { whiteScore, blackScore } = getEvaluationPair(boardState, EVAL_DEPTH);
   const baseline = getEvalBaseline();
 
@@ -1077,13 +1049,26 @@ function updateEvaluationBar(boardState = state) {
   const blackDelta = blackScore - baseline.blackScore;
   const scoreDelta = whiteDelta - blackDelta;
 
-  // 白視点と黒視点の差から割合へ変換
   const normalized = Math.tanh(scoreDelta / EVAL_PERCENT_SCALE);
   const whiteShare = Math.max(0, Math.min(100, 50 + normalized * EVAL_MAX_SWING));
   const blackShare = 100 - whiteShare;
 
+  return { whiteShare, blackShare };
+}
+
+function updateEvaluationBar(boardState = state) {
+  const evalBar = document.getElementById("eval-bar");
+  const scoreEl = document.getElementById("eval-score");
+  if (!evalBar || !scoreEl) return;
+
+  const { whiteShare, blackShare } = computeEvaluationPercentSnapshot(boardState);
   evalBar.style.background = `linear-gradient(to top, #111 0%, #111 ${blackShare}%, #f5f5f5 ${blackShare}%, #f5f5f5 100%)`;
   scoreEl.textContent = `白 ${whiteShare.toFixed(0)}% / 黒 ${blackShare.toFixed(0)}%`;
+  return { whiteShare, blackShare };
+}
+
+function saveReplayEvaluationSnapshot(boardState = state) {
+  replayEvaluationHistory.push(computeEvaluationPercentSnapshot(boardState));
 }
 
 const board = document.getElementById("board");
@@ -1249,6 +1234,8 @@ function setup() {
 
   render();
   updateEvaluationBar();
+  replayEvaluationHistory = [];
+  saveReplayEvaluationSnapshot(state);
 }
 
 let ghostMoves = [];
@@ -1618,6 +1605,7 @@ async function onCellClick(e) {
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
+        saveReplayEvaluationSnapshot(state);
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player=== 'black') {
           showModal("White wins!");
           endGame();
@@ -1665,6 +1653,7 @@ async function onCellClick(e) {
         selected = null;
         recordMove(currentPlayer, [sr, sc], [row, col], piece, newDie);
         render();
+        saveReplayEvaluationSnapshot(state);
         if (currentPlayer === 'white' && state[row][col]?.isKing && state[row][col]?.player === 'black') {
           showModal("White wins!");
           endGame();
@@ -1695,6 +1684,7 @@ async function onCellClick(e) {
     ghostMoves = [];
     selected = null;
     render();
+    saveReplayEvaluationSnapshot(state);
     endTurn(piece.player);
   }
 }
@@ -3147,6 +3137,7 @@ async function botTurn(botColor = currentPlayer) {
 
     recordMove(botColor, [fr, fc], [tr, tc], piece, newDie);
     render();
+    saveReplayEvaluationSnapshot(state);
     clearUIArrow();
     clearPVArrow();
     const snapshot = structuredClone(state);
