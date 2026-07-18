@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DiceChess</title>
+  <style>
+    :root {
+      --board-size: min(90vw, 400px);
+      --cell-size: calc(var(--board-size) / 8);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(circle at top, #2a0b10 0%, #12070a 45%, #050405 100%);
+      color: white;
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+
+    header {
+      position: static;
+      width: 100%;
+      height: 60px;
+      background-color: #222;
+      color: white;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1000;
+    }
+
+    #back-button {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 16px;
+      margin-right: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    #back-button:active {
+      opacity: 0.6;
+    }
+
+    .logo {
+      font-size: 1.5rem;
+      font-weight: bold;
+      margin: auto;
+    }
+
+    .menu-toggle {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      gap: 4px;
+    }
+
+    .menu-toggle div {
+      width: 25px;
+      height: 3px;
+      background-color: #fff;
+    }
+
+    nav {
+      position: absolute;
+      top: 60px;
+      right: 20px;
+      background-color: #444;
+      color: #fff;
+      display: none;
+      flex-direction: column;
+      min-width: 150px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      z-index: 1100;
+    }
+
+    nav a {
+      padding: 0.8rem 1rem;
+      text-decoration: none;
+      color: #fff;
+      border-bottom: 1px solid #555;
+    }
+
+    nav a:hover {
+      background-color: #555;
+    }
+
+    body.show-menu nav {
+      display: flex;
+    }
+
+    main#game-container {
+      position: static;
+      width: 100vw;
+      max-width: 100vw;
+      display: flex;
+      flex-direction: row;
+      gap: 18px;
+      align-items: flex-start;
+      justify-content: flex-start;
+      background: rgba(0,0,0,0.3);
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      padding: 20px;
+      box-sizing: border-box;
+flow-x: auto;
+flow-y: visible;
+      min-height: calc(100vh - 60px);
+    }
+
+    #board-container {
+      width: var(--board-size);
+      height: var(--board-size);
+      flex-shrink: 1;
+      max-width: 100%;
+      max-height: 100%;
+      position: relative;
+      min-width: 280px;
+      overflow: visible;
+    }
+
+    table#board {
+      border-collapse: collapse;
+      border: 4px solid #5a131b;
+      width: 100%;
+      height: 100%;
+      table-layout: fixed;
+      background: linear-gradient(145deg, rgba(255,255,255,0.04), rgba(0,0,0,0.16));
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 14px 30px rgba(0,0,0,0.35);
+    }
+
+    td {
+      width: var(--cell-size);
+      height: var(--cell-size); /* ★ 固定 */
+      position: relative;
+      perspective: 1000px;
+      box-sizing: border-box;
+      border: 1px solid rgba(255,255,255,0.07);
+flow: hidden;
+    }
+
+    td.white {
+      background: linear-gradient(145deg, #be2a3a 0%, #8f1522 100%);
+    }
+
+    td.black {
+      background: linear-gradient(145deg, #130607 0%, #2b090e 100%);
+    }
+
+    td.white:hover,
+    td.black:hover {
+      filter: brightness(1.08);
+    }
+
+    
+    td.selected {
+      outline: 3px solid yellow;
+    }
+
+    .dice {
+      width: 88%;
+      height: 88%;
+      max-width: 100%;
+      max-height: 100%;
+      position: absolute;
+      top: 6%;
+      left: 6%;
+      border-radius: 8px;
+      transform-origin: center;
+      transition: transform 0.35s ease-in-out, box-shadow 0.25s ease, filter 0.25s ease;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.12);
+flow: hidden;
+    }
+
+    .dice-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dice::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, rgba(255,255,255,0.32), rgba(255,255,255,0.02) 55%, rgba(0,0,0,0.14));
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .dice::after {
+      content: "";
+      position: absolute;
+      inset: 8%;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.12);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .dice.floating-move {
+      pointer-events: none;
+      z-index: 9999;
+      will-change: transform, left, top;
+    }
+
+    .dice.white-dice {
+      background: linear-gradient(145deg, #fffdf7 0%, #f0d7c6 100%);
+      color: #111;
+    }
+
+    .dice.black-dice {
+      background: linear-gradient(145deg, #202020 0%, #050505 100%);
+      color: #f7f7f7;
+    }
+
+    .dice.white-dice.king {
+      background: linear-gradient(145deg, #ff6a6a 0%, #b30000 100%);
+      box-shadow:
+        0 8px 16px rgba(0,0,0,0.35),
+        inset 0 0 18px rgba(255, 255, 255, 0.14);
+    }
+
+    .dice.black-dice.king {
+      background: linear-gradient(145deg, #4da3ff 0%, #0047b3 100%);
+      box-shadow:
+        0 8px 16px rgba(0,0,0,0.35),
+        inset 0 0 18px rgba(255, 255, 255, 0.12);
+    }
+
+    .pip {
+      position: absolute;
+      width: 12%;
+      aspect-ratio: 1 / 1;
+      border-radius: 50%;
+      z-index: 2;
+      box-shadow: inset 0 -2px 3px rgba(0,0,0,0.2);
+    }
+
+    .pip.white {
+      background: #222;
+    }
+
+    .pip.black {
+      background: #f4f4f4;
+    }
+
+
+    #replay-controls {
+      margin: 12px auto 0;
+      max-width: 300px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      background: rgba(255, 255, 255, 0.5);
+      color: #000;
+      padding: 10px;
+      border-radius: 10px;
+    }
+
+    .hidden {
+      display: none!important;
+    }
+
+    #replay-controls button {
+      flex: 1;
+      padding: 10px;
+      font-size: 1rem;
+      cursor: pointer;
+      max-width: 140px;
+    }
+
+    #replay-controls p {
+      margin: 0.3rem 0 0;
+      font-size: 0.9rem;
+    }
+
+    .ghost-wrapper {
+      opacity: 0.5;
+      transform: scale(0.5);
+      filter: brightness(60%);
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .ghost-dice .face {
+      border: 1px dashed #000;
+    }
+
+    #robot-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px;
+      justify-content: center;
+    }
+
+    #robot-icon-name {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #robot-avatar {
+      width: 60px;
+      height: 60px;
+      border-radius: 0;
+      object-fit: cover;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    #robot-name {
+      margin-top: 6px;
+      font-weight: bold;
+      font-size: 0.9rem;
+      color: white;
+    }
+
+    #robot-bubble {
+      background-color: #fff;
+      color: #000;
+      border: 2px solid #888;
+      border-radius: 16px;
+      padding: 10px 14px;
+      width: 200px;
+      height: 65px;
+      font-size: 14px;
+      position: relative;
+      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.2);
+flow-wrap: break-word;
+flow: hidden;
+      box-sizing: border-box;
+    }
+
+    #robot-bubble::before {
+      content: "";
+      position: absolute;
+      left: -10px;
+      top: 14px;
+      width: 0;
+      height: 0;
+      border: 10px solid transparent;
+      border-right-color: #fff;
+    }
+
+    #eval-panel {
+      width: 86px;
+      min-width: 86px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 10px;
+      padding: 10px 6px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 20px;
+      align-self: flex-start;
+      z-index: 20;
+      background: rgba(0,0,0,0.38);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: 14px;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.25);
+      backdrop-filter: blur(4px);
+    }
+
+    #eval-panel .label {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      color: rgba(255,255,255,0.9);
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    #eval-bar {
+      width: 30px;
+      height: min(74vh, 720px);
+      max-height: 720px;
+      min-height: 380px;
+      border-radius: 16px;
+flow: hidden;
+      position: relative;
+      background: linear-gradient(to top, #111 0%, #111 50%, #f5f5f5 50%, #f5f5f5 100%);
+      border: 2px solid rgba(255,255,255,0.25);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,0.18), 0 8px 18px rgba(0,0,0,0.25);
+    }
+
+    #eval-fill-white,
+    #eval-fill-black,
+    #eval-center-line {
+      display: none;
+    }
+
+    #eval-score {
+      font-size: 13px;
+      color: white;
+      min-height: 16px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      body {
+        overflow-x: hidden;
+      }
+
+      main#game-container {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        height: auto;
+        width: 100%;
+        max-width: 100%;
+        padding: 10px 10px 14px 66px;
+        overflow-x: hidden;
+        overflow-y: visible;
+      }
+
+      :root {
+        --board-size: min(calc(100vw - 96px), 300px);
+      }
+
+      #eval-panel {
+        position: fixed;
+        left: 6px;
+        top: 72px;
+        bottom: 10px;
+        width: 52px;
+        min-width: 52px;
+        padding: 8px 4px;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+
+      #eval-panel .label {
+        font-size: 10px;
+        writing-mode: vertical-rl;
+        transform: rotate(180deg);
+        letter-spacing: 0.05em;
+      }
+
+      #eval-bar {
+        width: 16px;
+        height: 100%;
+        min-height: 240px;
+        max-height: none;
+      }
+
+      #eval-score {
+        font-size: 10px;
+        min-height: 12px;
+      }
+
+      #robot-area {
+        width: min(100%, calc(100vw - 84px));
+        margin-bottom: 0;
+        flex-shrink: 0;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      #robot-bubble {
+        width: min(38vw, 160px);
+      }
+
+      #board-container {
+        width: var(--board-size);
+        min-width: 0;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        flex-shrink: 0;
+      }
+
+      #replay-controls {
+        max-width: min(calc(100vw - 96px), 280px);
+      }
+
+      #replay-controls button {
+        font-size: 1.1rem;
+      }
+    }
+
+    .eval-mark {
+      font-size: 18px;
+      position: absolute;
+      bottom: 2px;
+      right: 2px;
+      background-color: var(--mark-bg-color);
+      border-radius: 4px;
+      padding: 1px 4px;
+      color: #000;
+    }
+
+    @media (max-width: 768px) {
+      .eval-mark {
+        font-size: 12px;
+        padding: 1px 2px;
+      }
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #333;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 1rem auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: #fff;
+      color: #000;
+      padding: 20px 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 80%;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .modal-content button {
+      margin-top: 20px;
+      padding: 8px 16px;
+      font-size: 1rem;
+      border: none;
+      background: #4285F4;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .modal-content button:hover {
+      background: #3367d6;
+    }
+    button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+#arrow-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+}
+#svg-root {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index:1000000;
+}
+.btn {
+  width: 56px;
+  height: 56px;
+
+  border-radius: 50%;
+  border: 1px solid white;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: transparent;
+  color: white;
+
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-black {
+  background: black;
+  color: white;
+  border: 1px solid white;
+}
+.btn-white {
+  background: white;
+  color: black;
+  border: 1px solid black;
+}
+  </style>
+</head>
+<body>
+
+  <header>
+    <button id="back-button" aria-label="戻る">&larr;</button>
+    <div class="logo">🎲 DiceChess</div>
+    <div class="menu-toggle" onclick="document.body.classList.toggle('show-menu')">
+      <div></div><div></div><div></div>
+    </div>
+    <nav>
+      <a href="./index.html">Home</a>
+      <a href="./bot.html">Bot対戦</a>
+      <a href="./tutorial.html">ルール</a>
+      <a href="./login.html">オンライン対戦</a>
+      <a href="./ranking.html">ランキング</a>
+      <a href="./tsumeshogi.html">詰将棋</a>
+    </nav>
+  </header>
+
+  <main id="game-container">
+    <div id="eval-panel" aria-label="評価バー">
+      <div class="label">ANALYSIS</div>
+      <div id="eval-bar">
+        <div id="eval-fill-white"></div>
+        <div id="eval-fill-black"></div>
+        <div id="eval-center-line"></div>
+      </div>
+      <div id="eval-score">0.00</div>
+    </div>
+    <div id="robot-area">
+      <div id="robot-icon-name">
+        <img src="./dicechess_developer_transparent.png" alt="DiceChess Developer" id="robot-avatar" />
+        <span id="robot-name">DiceChess Developer</span>
+      </div>
+      <div id="robot-bubble">Welcome! Good luck, and have fun!</div>
+      <button id="whiteBtn" class="btn btn-white" onclick="setSide('white')">White</button>
+<button id="blackBtn" class="btn btn-black" onclick="setSide('black')">Black</button>
+    </div>
+    <div id="board-container">     
+       <svg id="svg-root">
+    <defs>
+     <marker id="arrowhead"
+        markerWidth="28"
+        markerHeight="28"
+        refX="10"
+        refY="14"
+        orient="auto"
+        markerUnits="userSpaceOnUse">
+  <polygon points="0 0, 28 14, 0 14" fill="currentColor"/>
+</marker>
+    </defs>
+
+    <!-- PV layer -->
+    <g id="arrow-layer-pv"></g>
+
+    <!-- UI layer -->
+    <g id="arrow-layer-ui"></g>
+
+  </svg>
+      <table id="board"></table>
+      <audio id="dice-roll-sound" src="./roll.mp3" preload="auto"></audio>
+      <div id="replay-controls" class="hidden">
+        <div id="loading-spinner" class="spinner" style="display: none;"></div>
+        <button id="prev-button" onclick="prevMove()">⏮</button>
+        <button id="next-button" onclick="nextMove()">⏭</button>
+        <p id="move-description"></p>
+        <p id="evaluation"></p>
+      </div>
+    </div>
+  </main>
+
+  <div id="custom-modal" class="modal hidden">
+    <div class="modal-content">
+      <p id="modal-message"></p>
+      <button onclick="closeModal()">OK</button>
+    </div>
+  </div>
+
+
+<script>
+    const BOT = "lime";
+const HUMAN = "orange";
+const PV = "cyan";
+    
+    let humanPlayer = "white"; // or "black"
+let botPlayer = "black";   // 自動
+let currentPlayer = "white"; // 常に白から開始
+
+
+
+const AUTO_BATTLE = false;
+let autoBattleStarted = false;
+let battleLocked = false;
+
+function startAutoBattle() {
+  autoBattleStarted = true;
+  battleLocked = true;
+  humanPlayer = null;
+  botPlayer = null;
+  currentPlayer = "white";
+
+  const whiteBtn = document.getElementById("whiteBtn");
+  const blackBtn = document.getElementById("blackBtn");
+  if (whiteBtn) whiteBtn.disabled = true;
+  if (blackBtn) blackBtn.disabled = true;
+
+  updateRobotMessage("自動対局を開始します");
+  const boardEl = document.getElementById("board");
+  if (boardEl) boardEl.style.transform = "rotate(0deg)";
+
+  setTimeout(() => {
+    botTurn("white");
+  }, 300);
+}
+
+function setSide(side) {
+  humanPlayer = side;
+  botPlayer = opponent(side);
+  currentPlayer = "white";
+  openingIndex = 0;
+  battleLocked = false;
+  autoBattleStarted = false;
+
+  const boardEl = document.getElementById("board");
+  if (boardEl) {
+    boardEl.style.transform = side === "black" ? "rotate(180deg)" : "rotate(0deg)";
+  }
+
+  const whiteBtn = document.getElementById("whiteBtn");
+  const blackBtn = document.getElementById("blackBtn");
+  if (whiteBtn) whiteBtn.disabled = true;
+  if (blackBtn) blackBtn.disabled = true;
+
+  updateRobotMessage(
+    side === "white"
+      ? "あなたは白です。白番から開始します。"
+      : "あなたは黒です。白のBotから開始します。"
+  );
+
+  render();
+
+  if (botPlayer === "white") {
+    setTimeout(() => botTurn("white"), 300);
+  }
+}
+
+  function showModal(message) {
+    document.getElementById("modal-message").innerText = message;
+    document.getElementById("custom-modal").classList.remove("hidden");
+  }
+
+  function closeModal() {
+    document.getElementById("custom-modal").classList.add("hidden");
+  }
+
+document.getElementById('back-button').addEventListener('click', () => {
+  window.history.back();  // ひとつ前のページに戻る（ブラウザ履歴）
+});
+
+
+let moveHistory = []; // 棋譜保存
+
+let currentReplayIndex = -1;
+let boardStates = []; // 各局面のボード状態のスナップショット
+
+function endGame() {
+  document.getElementById("replay-controls").classList.remove("hidden");
+  prepareReplayStates(); // 後述
+}
+
+
+function renderBoard(customState) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const td = board.rows[r].cells[c];
+      td.classList.remove("selected");
+      td.innerHTML = "";
+
+      const piece = customState[r][c];
+      if (piece) {
+        const dice = createDiceElement(piece);
+        td.appendChild(dice);
+        console.log('top:', piece.top, 'diceRotations:', diceRotations[piece.top]);
+      }
+    }
+  }
+  
+
+  // リプレイ中はゴーストを描画しない（または必要に応じて処理を追加）
+}
+
+
+function createInitialBoard() {
+  const initialSetup = [
+    [5, 3, 3, 2, 6, 3, 3, 5],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [null, null, null, null, null, null, null, null],
+    [1, 1, 1, 1, 1, 1, 1, 1],
+    [5, 3, 3, 6, 2, 3, 3, 5]
+  ];
+
+  const board = [];
+
+  for (let i = 0; i < 8; i++) {
+    board[i] = [];
+    for (let j = 0; j < 8; j++) {
+      const value = initialSetup[i][j];
+      const player = i < 2 ? 'black' : i > 5 ? 'white' : null;
+
+      if (value == null || player == null) {
+        board[i][j] = null;
+      } else {
+        const isKing = value === 2; // キングの条件が2のときだけなら
+        board[i][j] = createPiece(value, player === 'white' ? '#fff' : '#222', player, isKing);
+      }
+    }
+  }
+
+  return board;
+}
+
+
+
+function recordMove(player, from, to, pieceBefore, pieceAfter, captured = null) {
+  moveHistory.push({
+  turn: moveHistory.length + 1,
+  player,
+  from,
+  to,
+  pieceBefore: { top: pieceBefore.top, id: pieceBefore.id, player: pieceBefore.player, isKing: pieceBefore.isKing },
+  pieceAfter: { top: pieceAfter.top, id: pieceAfter.id, player: pieceAfter.player, isKing: pieceAfter.isKing },
+  captured: captured ? { top: captured.top, id: captured.id, player: captured.player, isKing: captured.isKing } : null,
+});
+}
+
+
+function showMoveHistory() {
+  console.log("=== 棋譜 ===");
+  moveHistory.forEach(move => {
+    const { turn, player, from, to, pieceBefore, pieceAfter, captured } = move;
+    console.log(
+      `${turn}. ${player}: [${from}] → [${to}] ${captured ? `(取:${captured.top})` : ""}`
+    );
+  });
+}
+
+// 棋譜を分析して表示する関数
+function analyzeMoves() {
+  const log = moveHistory.map((move, index) => {
+    const from = `(${move.from[0]},${move.from[1]})`;
+    const to = `(${move.to[0]},${move.to[1]})`;
+   
