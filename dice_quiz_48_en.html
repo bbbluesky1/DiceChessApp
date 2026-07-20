@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>48-State Dice Alphabet Quiz</title>
+<style>
+:root{
+  --bg:#f6f7fb;
+  --card:#ffffff;
+  --ink:#1f2937;
+  --muted:#6b7280;
+  --line:#d1d5db;
+  --accent:#2563eb;
+  --accent2:#7c3aed;
+  --good:#16a34a;
+  --bad:#dc2626;
+  --pip:#111827;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:radial-gradient(circle at top, #ffffff 0, var(--bg) 55%, #edf2ff 100%);
+  color:var(--ink);
+}
+.container{
+  max-width:1180px;
+  margin:0 auto;
+  padding:20px;
+}
+h1{
+  margin:0 0 8px;
+  font-size:clamp(24px, 4vw, 36px);
+}
+.sub{
+  color:var(--muted);
+  margin:0 0 18px;
+  line-height:1.6;
+}
+.grid{
+  display:grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap:16px;
+}
+@media (max-width: 900px){
+  .grid{grid-template-columns:1fr;}
+}
+.card{
+  background:rgba(255,255,255,.92);
+  backdrop-filter: blur(8px);
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:0 10px 30px rgba(0,0,0,.05);
+  padding:18px;
+}
+.row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  border:1px solid var(--line);
+  background:#f9fafb;
+  padding:8px 12px;
+  border-radius:999px;
+  font-size:14px;
+}
+.badge strong{font-size:15px}
+.controls{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin:14px 0 8px;
+}
+button, select, input{font:inherit}
+button{
+  border:none;
+  border-radius:14px;
+  padding:11px 14px;
+  cursor:pointer;
+  transition:.15s transform, .15s opacity, .15s background, .15s box-shadow;
+}
+button:hover{box-shadow:0 8px 20px rgba(0,0,0,.08)}
+button:active{transform:translateY(1px)}
+.primary{
+  background:linear-gradient(135deg, var(--accent), var(--accent2));
+  color:#fff;
+}
+.secondary{
+  background:#eef2ff;
+  color:#3730a3;
+}
+.ghost{
+  background:#f3f4f6;
+  color:#111827;
+}
+.danger{
+  background:#fee2e2;
+  color:#991b1b;
+}
+.choice{
+  min-width:44px;
+  padding:10px 12px;
+  border:1px solid var(--line);
+  background:#fff;
+}
+.choice.selected{
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(37,99,235,.12);
+  background:#eff6ff;
+}
+.choice.correct{
+  background:#dcfce7;
+  border-color:#86efac;
+}
+.choice.wrong{
+  background:#fee2e2;
+  border-color:#fecaca;
+}
+.small{
+  font-size:13px;
+  color:var(--muted);
+  line-height:1.5;
+}
+.quiz-area{display:grid; gap:14px;}
+.stage{
+  min-height:380px;
+  display:grid;
+  place-items:center;
+  border:1px solid var(--line);
+  border-radius:22px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,.96), rgba(255,255,255,.7) 55%, rgba(226,232,240,.75) 100%);
+  overflow:hidden;
+  position:relative;
+}
+.stage::after{
+  content:"";
+  position:absolute;
+  inset:auto 18% 26px 18%;
+  height:22px;
+  border-radius:50%;
+  background:rgba(15,23,42,.12);
+  filter:blur(12px);
+}
+.space-label{
+  position:absolute;
+  font-weight:800;
+  letter-spacing:.08em;
+  font-size:12px;
+  color:rgba(31,41,55,.72);
+  background:rgba(255,255,255,.66);
+  border:1px solid rgba(209,213,219,.9);
+  padding:7px 10px;
+  border-radius:999px;
+  box-shadow:0 6px 18px rgba(15,23,42,.06);
+  backdrop-filter: blur(4px);
+  z-index:2;
+  user-select:none;
+}
+.space-up{
+  top:12px;
+  left:50%;
+  transform:translateX(-50%);
+}
+.space-front{
+  bottom:18px;
+  left:50%;
+  transform:translateX(-50%);
+}
+.space-left{
+  left:14px;
+  top:50%;
+  transform:translateY(-50%);
+}
+.space-right{
+  right:14px;
+  top:50%;
+  transform:translateY(-50%);
+}
+.space-up::before{content:"↑ "; color:var(--accent)}
+.space-front::before{content:"↘ "; color:var(--accent2)}
+.space-left::before{content:"← "; color:var(--accent)}
+.space-right::before{content:"→ "; color:var(--accent2)}
+.scene{
+  width:min(320px, 72vw);
+  height:min(320px, 72vw);
+  perspective:900px;
+  display:grid;
+  place-items:center;
+  position:relative;
+  z-index:1;
+}
+.cube{
+  width:170px;
+  height:170px;
+  position:relative;
+  transform-style:preserve-3d;
+  transform: rotateX(-28deg) rotateY(38deg);
+}
+.face3d{
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  border:1px solid rgba(15,23,42,.12);
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.96), rgba(239,246,255,.88) 52%, rgba(226,232,240,.98));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.face3d::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(135deg, rgba(255,255,255,.25), transparent 48%, rgba(0,0,0,.06));
+  pointer-events:none;
+}
+.face3d .pip-svg{
+  width:100%;
+  height:100%;
+  display:block;
+}
+.face3d .num{
+  position:absolute;
+  bottom:8px;
+  right:10px;
+  font-size:13px;
+  font-weight:700;
+  color:rgba(17,24,39,.75);
+  background:rgba(255,255,255,.55);
+  border:1px solid rgba(17,24,39,.08);
+  padding:2px 7px;
+  border-radius:999px;
+}
+.top{
+  transform: rotateX(90deg) translateZ(85px);
+  transform-origin:center;
+}
+.bottom{
+  transform: rotateX(-90deg) translateZ(85px);
+}
+.front{
+  transform: translateZ(85px);
+}
+.back{
+  transform: rotateY(180deg) translateZ(85px);
+}
+.right{
+  transform: rotateY(90deg) translateZ(85px);
+}
+.left{
+  transform: rotateY(-90deg) translateZ(85px);
+}
+.die-note{
+  position:absolute;
+  top:14px;
+  left:14px;
+  background:rgba(255,255,255,.72);
+  border:1px solid rgba(209,213,219,.9);
+  padding:8px 12px;
+  border-radius:999px;
+  font-size:13px;
+  color:var(--muted);
+}
+.answer-box{
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:14px;
+  background:#fafafa;
+}
+.answer-grid{
+  display:grid;
+  grid-template-columns: repeat(6, minmax(42px, 1fr));
+  gap:8px;
+  margin-top:10px;
+}
+@media (max-width: 620px){
+  .answer-grid{grid-template-columns: repeat(4, minmax(42px, 1fr));}
+}
+select{
+  width:100%;
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:10px 12px;
+  background:white;
+}
+.notice{margin-top:10px; font-weight:700;}
+.notice.good{color:var(--good)}
+.notice.bad{color:var(--bad)}
+.hr{height:1px; background:var(--line); margin:18px 0;}
+details summary{cursor:pointer; font-weight:700;}
+table{width:100%; border-collapse:collapse; margin-top:12px; font-size:14px;}
+th,td{border:1px solid var(--line); padding:7px 8px; text-align:center;}
+th{background:#f3f4f6}
+thead th{position:sticky; top:0;}
+.ref{max-height:420px; overflow:auto; border:1px solid var(--line); border-radius:16px;}
+.footer-note{margin-top:12px; color:var(--muted); font-size:13px; line-height:1.5;}
+.pip{fill:var(--pip)}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>48-State Dice Alphabet Quiz</h1>
+  <p class="sub">This quiz randomizes 24 states for each of the two patterns, α and β, for a total of 48 states. Instead of reading text, you judge the answer from the 3D die itself.<br>Use the FRONT / RIGHT / LEFT / UP labels on the screen as your reference.</p>
+
+  <div class="grid">
+    <section class="card quiz-area">
+      <div class="row">
+        <span class="badge">Question <strong id="qNo">0</strong></span>
+        <span class="badge">Score <strong id="score">0</strong></span>
+        <span class="badge">Streak <strong id="streak">0</strong></span>
+      </div>
+
+      <div class="row">
+        <span class="badge">Status <strong id="progress">Not started</strong></span>
+        <span class="badge">Display mode <strong>3D die</strong></span>
+      </div>
+
+      <div class="stage" aria-label="dice stage">
+        <div class="die-note">Use the visible faces to identify the pattern name and the letter</div>
+        <div class="space-label space-up">UP</div>
+        <div class="space-label space-front">FRONT</div>
+        <div class="space-label space-left">RIGHT</div>
+        <div class="space-label space-right">LEFT</div>
+        <div class="scene">
+          <div class="cube" id="cube">
+            <div class="face3d top" id="faceTop"></div>
+            <div class="face3d bottom" id="faceBottom"></div>
+            <div class="face3d front" id="faceFront"></div>
+            <div class="face3d back" id="faceBack"></div>
+            <div class="face3d right" id="faceRight"></div>
+            <div class="face3d left" id="faceLeft"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="answer-box">
+        <div class="row" style="justify-content:space-between; align-items:flex-end;">
+          <div style="flex:1; min-width:220px;">
+            <div class="small">Pattern</div>
+            <select id="patternSelect">
+              <option value="">Select one</option>
+              <option value="α">α</option>
+              <option value="β">β</option>
+            </select>
+          </div>
+          <div style="flex:1; min-width:220px;">
+            <div class="small">Letter</div>
+            <select id="letterSelect">
+              <option value="">Select one</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="controls">
+          <button class="primary" id="checkBtn">Check answer</button>
+          <button class="secondary" id="showBtn">Show answer</button>
+          <button class="ghost" id="nextBtn">Next question</button>
+          <button class="danger" id="resetBtn">Reset score</button>
+        </div>
+
+        <div id="result" class="notice">No answer yet.</div>
+        <div class="small" id="hint"></div>
+      </div>
+
+      <div class="footer-note">
+        How to play: look at the 3D die, then answer using the two dropdowns below.<br>
+        If you get stuck, tap “Show answer” to check the correct result, then move on to the next question.
+      </div>
+    </section>
+
+    <aside class="card">
+      <div class="row" style="justify-content:space-between;">
+        <div>
+          <div style="font-weight:800; font-size:18px;">Quiz rules</div>
+          <div class="small">Each pattern has 24 states, and the quiz chooses randomly from all 48 states.</div>
+        </div>
+      </div>
+
+      <div class="hr"></div>
+
+      <div style="font-weight:700; margin-bottom:8px;">All letters</div>
+      <div class="answer-grid" id="letterGrid"></div>
+
+      <div class="hr"></div>
+
+      <details>
+        <summary>Reference tables (α / β)</summary>
+        <div class="ref" id="refTables"></div>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<script>
+const starts = [
+  { name:"α", U:4, D:3, F:5, B:2, R:1, L:6 },
+  { name:"β", U:4, D:3, F:5, B:2, R:6, L:1 }
+];
+
+function left(s){
+  return { U:s.R, D:s.L, F:s.F, B:s.B, R:s.D, L:s.U };
+}
+function right(s){
+  return { U:s.L, D:s.R, F:s.F, B:s.B, R:s.U, L:s.D };
+}
+function front(s){
+  return { U:s.B, D:s.F, F:s.U, B:s.D, R:s.R, L:s.L };
+}
+function back(s){
+  return { U:s.F, D:s.B, F:s.D, B:s.U, R:s.R, L:s.L };
+}
+const moves = [left, right, front, back];
+
+function key(s){
+  return `${s.U},${s.D},${s.F},${s.B},${s.R},${s.L}`;
+}
+
+function generateStates(start){
+  const queue = [{...start}];
+  const visited = new Set();
+  const states = [];
+
+  while(queue.length){
+    const s = queue.shift();
+    const k = key(s);
+    if(visited.has(k)) continue;
+    visited.add(k);
+    states.push({...s});
+    for(const move of moves){
+      queue.push(move(s));
+    }
+  }
+  return states;
+}
+
+function buildIdMap(states){
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const map = new Map();
+  states.forEach((s, i) => map.set(key(s), letters[i]));
+  return map;
+}
+
+function pipPositions(value){
+  const p = {
+    tl:[28,28], tr:[72,28], ml:[28,50], mr:[72,50], bl:[28,72], br:[72,72], c:[50,50]
+  };
+  const map = {
+    1:[p.c],
+    2:[p.tl,p.br],
+    3:[p.tl,p.c,p.br],
+    4:[p.tl,p.tr,p.bl,p.br],
+    5:[p.tl,p.tr,p.c,p.bl,p.br],
+    6:[p.tl,p.ml,p.bl,p.tr,p.mr,p.br]
+  };
+  return map[value] || [p.c];
+}
+
+function faceSvg(value){
+  const dots = pipPositions(value).map(([cx, cy]) => `<circle class="pip" cx="${cx}" cy="${cy}" r="7"></circle>`).join("");
+  return `
+    <svg class="pip-svg" viewBox="0 0 100 100" aria-hidden="true">
+      <rect x="0" y="0" width="100" height="100" rx="18" fill="transparent"></rect>
+      ${dots}
+      <text x="50" y="95" text-anchor="middle" font-size="11" fill="rgba(17,24,39,.08)">dice</text>
+    </svg>
+    <div class="num">${value}</div>
+  `;
+}
+
+const data = starts.map(start => {
+  const states = generateStates(start);
+  const idMap = buildIdMap(states);
+  return { start, states, idMap };
+});
+
+const allQuestions = [];
+for(const pack of data){
+  for(const s of pack.states){
+    allQuestions.push({
+      pattern: pack.start.name,
+      letter: pack.idMap.get(key(s)),
+      state: s
+    });
+  }
+}
+
+const letterOptions = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const letterGrid = document.getElementById("letterGrid");
+const letterSelect = document.getElementById("letterSelect");
+const patternSelect = document.getElementById("patternSelect");
+
+letterOptions.slice(0,24).forEach(ch => {
+  const btn = document.createElement("button");
+  btn.className = "choice";
+  btn.textContent = ch;
+  btn.dataset.letter = ch;
+  btn.addEventListener("click", () => {
+    letterSelect.value = ch;
+    [...letterGrid.querySelectorAll(".choice")].forEach(x => x.classList.remove("selected"));
+    btn.classList.add("selected");
+  });
+  letterGrid.appendChild(btn);
+
+  const opt = document.createElement("option");
+  opt.value = ch;
+  opt.textContent = ch;
+  letterSelect.appendChild(opt);
+});
+
+const refTables = document.getElementById("refTables");
+for(const pack of data){
+  const h = document.createElement("h3");
+  h.textContent = `${pack.start.name} (${pack.states.length} states)`;
+  h.style.margin = "14px 0 8px";
+  refTables.appendChild(h);
+
+  const table = document.createElement("table");
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Up</th>
+        <th>Front</th>
+        <th>Right</th>
+        <th>Left</th>
+        <th>Right</th>
+        <th>Front</th>
+        <th>Back</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector("tbody");
+  const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  pack.states.forEach((s, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td>${letters[i]}</td>
+      <td>${s.U}</td>
+      <td>${s.F}</td>
+      <td>${s.R}</td>
+      <td>${pack.idMap.get(key(left(s)))}</td>
+      <td>${pack.idMap.get(key(right(s)))}</td>
+      <td>${pack.idMap.get(key(front(s)))}</td>
+      <td>${pack.idMap.get(key(back(s)))}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+  refTables.appendChild(table);
+}
+
+let current = null;
+let qCount = 0;
+let score = 0;
+let streak = 0;
+let answered = false;
+
+const qNo = document.getElementById("qNo");
+const scoreEl = document.getElementById("score");
+const streakEl = document.getElementById("streak");
+const progressEl = document.getElementById("progress");
+const resultEl = document.getElementById("result");
+const hintEl = document.getElementById("hint");
+
+function renderState(state){
+  document.getElementById("faceTop").innerHTML = faceSvg(state.U);
+  document.getElementById("faceBottom").innerHTML = faceSvg(state.D);
+  document.getElementById("faceFront").innerHTML = faceSvg(state.F);
+  document.getElementById("faceBack").innerHTML = faceSvg(state.B);
+  document.getElementById("faceRight").innerHTML = faceSvg(state.L);
+  document.getElementById("faceLeft").innerHTML = faceSvg(state.R);
+}
+
+function randInt(n){
+  return Math.floor(Math.random()*n);
+}
+
+function pickQuestion(){
+  current = allQuestions[randInt(allQuestions.length)];
+  qCount += 1;
+  answered = false;
+  patternSelect.value = "";
+  letterSelect.value = "";
+  [...letterGrid.querySelectorAll(".choice")].forEach(x => x.classList.remove("selected","correct","wrong"));
+  renderState(current.state);
+  qNo.textContent = qCount;
+  progressEl.textContent = `One question from α / β`;
+  resultEl.textContent = "No answer yet.";
+  resultEl.className = "notice";
+  hintEl.textContent = "";
+}
+
+function reveal(correct=false){
+  hintEl.textContent = `Correct answer: ${current.pattern}-${current.letter}`;
+  if(correct){
+    resultEl.textContent = "Correct!";
+    resultEl.className = "notice good";
+  }else{
+    resultEl.textContent = "Incorrect.";
+    resultEl.className = "notice bad";
+  }
+}
+
+document.getElementById("checkBtn").addEventListener("click", () => {
+  if(!current) return;
+  if(answered){
+    hintEl.textContent = `Correct answer: ${current.pattern}-${current.letter}`;
+    return;
+  }
+  const p = patternSelect.value;
+  const l = letterSelect.value;
+  const ok = (p === current.pattern && l === current.letter);
+  answered = true;
+
+  if(ok){
+    score += 1;
+    streak += 1;
+    resultEl.textContent = "Correct!";
+    resultEl.className = "notice good";
+  }else{
+    streak = 0;
+    resultEl.textContent = "Incorrect.";
+    resultEl.className = "notice bad";
+  }
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  [...letterGrid.querySelectorAll(".choice")].forEach(btn => {
+    if(btn.dataset.letter === current.letter) btn.classList.add("correct");
+    if(btn.dataset.letter === l && l !== current.letter) btn.classList.add("wrong");
+  });
+  reveal(ok);
+});
+
+document.getElementById("showBtn").addEventListener("click", () => {
+  if(!current) return;
+  answered = true;
+  [...letterGrid.querySelectorAll(".choice")].forEach(btn => {
+    if(btn.dataset.letter === current.letter) btn.classList.add("correct");
+  });
+  resultEl.textContent = "Answer revealed.";
+  resultEl.className = "notice";
+  reveal(false);
+});
+
+document.getElementById("nextBtn").addEventListener("click", () => {
+  pickQuestion();
+});
+
+document.getElementById("resetBtn").addEventListener("click", () => {
+  qCount = 0;
+  score = 0;
+  streak = 0;
+  qNo.textContent = qCount;
+  scoreEl.textContent = score;
+  streakEl.textContent = streak;
+  pickQuestion();
+});
+
+pickQuestion();
+</script>
+</body>
+</html>
