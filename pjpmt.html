@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>24 States</title>
+<style>
+body{
+    font-family:sans-serif;
+    margin:20px;
+}
+table{
+    border-collapse:collapse;
+    margin-bottom:40px;
+}
+th,td{
+    border:1px solid #999;
+    padding:4px 10px;
+    text-align:center;
+}
+th{
+    background:#eee;
+}
+</style>
+</head>
+<body>
+
+<div id="output"></div>
+
+<script>
+const starts = [
+{
+    name:"α",
+    U:4,D:3,F:5,B:2,R:1,L:6
+},
+{
+    name:"β",
+    U:4,D:3,F:5,B:2,R:6,L:1
+}
+];
+
+function left(s){
+    return {
+        U:s.R,D:s.L,
+        F:s.F,B:s.B,
+        R:s.D,L:s.U
+    };
+}
+
+function right(s){
+    return {
+        U:s.L,D:s.R,
+        F:s.F,B:s.B,
+        R:s.U,L:s.D
+    };
+}
+
+function front(s){
+    return {
+        U:s.B,D:s.F,
+        F:s.U,B:s.D,
+        R:s.R,L:s.L
+    };
+}
+
+function back(s){
+    return {
+        U:s.F,D:s.B,
+        F:s.D,B:s.U,
+        R:s.R,L:s.L
+    };
+}
+
+const moves=[left,right,front,back];
+
+function key(s){
+    return `${s.U},${s.D},${s.F},${s.B},${s.R},${s.L}`;
+}
+
+const output=document.getElementById("output");
+
+for(const start of starts){
+
+    const queue=[{...start}];
+    const visited=new Set();
+    const states=[];
+
+    while(queue.length){
+
+        const s=queue.shift();
+        const k=key(s);
+
+        if(visited.has(k)) continue;
+        visited.add(k);
+
+        states.push({...s});
+
+        for(const move of moves){
+            queue.push(move(s));
+        }
+    }
+
+    const h=document.createElement("h2");
+    h.textContent=`${start.name} (${states.length} states)`;
+    output.appendChild(h);
+
+    const table=document.createElement("table");
+
+    table.innerHTML=`
+<tr>
+    <th>ID</th>
+    <th>Up</th>
+    <th>Front</th>
+    <th>Right</th>
+    <th>Left</th>
+    <th>Right</th>
+    <th>Front</th>
+    <th>Back</th>
+</tr>
+`;
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const idMap = new Map();
+
+states.forEach((s,i)=>{
+    idMap.set(key(s), letters[i]);
+});
+
+states.forEach((s,i)=>{
+
+    const tr=document.createElement("tr");
+
+    const L = idMap.get(key(left(s)));
+    const R = idMap.get(key(right(s)));
+    const F = idMap.get(key(front(s)));
+    const B = idMap.get(key(back(s)));
+
+    tr.innerHTML=`
+        <td>${letters[i]}</td>
+        <td>${s.U}</td>
+        <td>${s.F}</td>
+        <td>${s.R}</td>
+        <td>${L}</td>
+        <td>${R}</td>
+        <td>${F}</td>
+        <td>${B}</td>
+    `;
+
+    table.appendChild(tr);
+});
+
+    output.appendChild(table);
+}
+</script>
+
+</body>
+</html>
