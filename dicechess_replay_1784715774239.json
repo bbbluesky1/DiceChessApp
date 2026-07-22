@@ -1,0 +1,284 @@
+{
+  "initialSetup": [
+    [
+      null,
+      null,
+      null,
+      null,
+      {
+        "top": 1,
+        "player": "black",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      {
+        "top": 2,
+        "player": "black",
+        "isKing": true,
+        "reverseFB": false
+      },
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "top": 3,
+        "player": "black",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "top": 2,
+        "player": "white",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      {
+        "top": 6,
+        "player": "white",
+        "isKing": false,
+        "reverseFB": true
+      },
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      {
+        "top": 2,
+        "player": "white",
+        "isKing": true,
+        "reverseFB": true
+      }
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "moves": [
+    {
+      "turn": 1,
+      "player": "white",
+      "from": [
+        4,
+        7
+      ],
+      "to": [
+        2,
+        7
+      ],
+      "pieceBefore": {
+        "top": 2,
+        "player": "white",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 5,
+        "player": "white",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "!"
+    },
+    {
+      "turn": 2,
+      "player": "black",
+      "from": [
+        1,
+        6
+      ],
+      "to": [
+        1,
+        4
+      ],
+      "pieceBefore": {
+        "top": 3,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 3,
+      "player": "white",
+      "from": [
+        3,
+        4
+      ],
+      "to": [
+        3,
+        5
+      ],
+      "pieceBefore": {
+        "top": 6,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "!"
+    },
+    {
+      "turn": 4,
+      "player": "black",
+      "from": [
+        0,
+        4
+      ],
+      "to": [
+        0,
+        5
+      ],
+      "pieceBefore": {
+        "top": 1,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 3,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 5,
+      "player": "white",
+      "from": [
+        2,
+        6
+      ],
+      "to": [
+        1,
+        6
+      ],
+      "pieceBefore": {
+        "top": 2,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 1,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 6,
+      "player": "black",
+      "from": [
+        0,
+        5
+      ],
+      "to": [
+        1,
+        5
+      ],
+      "pieceBefore": {
+        "top": 3,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 5,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 7,
+      "player": "white",
+      "from": [
+        1,
+        6
+      ],
+      "to": [
+        0,
+        6
+      ],
+      "pieceBefore": {
+        "top": 1,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 5,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    }
+  ]
+}
