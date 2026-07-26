@@ -1,0 +1,385 @@
+{
+  "initialSetup": [
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      {
+        "top": 2,
+        "player": "white",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      null,
+      null,
+      {
+        "top": 3,
+        "player": "white",
+        "isKing": true,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      {
+        "top": 6,
+        "player": "black",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      {
+        "top": 6,
+        "player": "black",
+        "isKing": true,
+        "reverseFB": false
+      },
+      null,
+      {
+        "top": 3,
+        "player": "black",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      {
+        "top": 6,
+        "player": "black",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    [
+      null,
+      {
+        "top": 3,
+        "player": "white",
+        "isKing": false,
+        "reverseFB": false
+      },
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  ],
+  "moves": [
+    {
+      "turn": 1,
+      "player": "white",
+      "from": [
+        2,
+        0
+      ],
+      "to": [
+        3,
+        0
+      ],
+      "pieceBefore": {
+        "top": 2,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 6,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "!"
+    },
+    {
+      "turn": 2,
+      "player": "black",
+      "from": [
+        4,
+        1
+      ],
+      "to": [
+        4,
+        0
+      ],
+      "pieceBefore": {
+        "top": 6,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 3,
+      "player": "white",
+      "from": [
+        3,
+        3
+      ],
+      "to": [
+        3,
+        1
+      ],
+      "pieceBefore": {
+        "top": 3,
+        "player": "white",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "white",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "!!"
+    },
+    {
+      "turn": 4,
+      "player": "black",
+      "from": [
+        4,
+        0
+      ],
+      "to": [
+        3,
+        0
+      ],
+      "pieceBefore": {
+        "top": 4,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 5,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 5,
+      "player": "white",
+      "from": [
+        3,
+        1
+      ],
+      "to": [
+        5,
+        1
+      ],
+      "pieceBefore": {
+        "top": 4,
+        "player": "white",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 3,
+        "player": "white",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "!"
+    },
+    {
+      "turn": 6,
+      "player": "black",
+      "from": [
+        5,
+        0
+      ],
+      "to": [
+        4,
+        0
+      ],
+      "pieceBefore": {
+        "top": 6,
+        "player": "black",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 5,
+        "player": "black",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 7,
+      "player": "white",
+      "from": [
+        5,
+        1
+      ],
+      "to": [
+        4,
+        1
+      ],
+      "pieceBefore": {
+        "top": 3,
+        "player": "white",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 2,
+        "player": "white",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "!"
+    },
+    {
+      "turn": 8,
+      "player": "black",
+      "from": [
+        4,
+        0
+      ],
+      "to": [
+        5,
+        0
+      ],
+      "pieceBefore": {
+        "top": 5,
+        "player": "black",
+        "isKing": true
+      },
+      "pieceAfter": {
+        "top": 6,
+        "player": "black",
+        "isKing": true
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 9,
+      "player": "white",
+      "from": [
+        7,
+        1
+      ],
+      "to": [
+        5,
+        1
+      ],
+      "pieceBefore": {
+        "top": 3,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "!!"
+    },
+    {
+      "turn": 10,
+      "player": "black",
+      "from": [
+        3,
+        0
+      ],
+      "to": [
+        4,
+        0
+      ],
+      "pieceBefore": {
+        "top": 5,
+        "player": "black",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 4,
+        "player": "black",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    },
+    {
+      "turn": 11,
+      "player": "white",
+      "from": [
+        5,
+        1
+      ],
+      "to": [
+        5,
+        0
+      ],
+      "pieceBefore": {
+        "top": 4,
+        "player": "white",
+        "isKing": false
+      },
+      "pieceAfter": {
+        "top": 1,
+        "player": "white",
+        "isKing": false
+      },
+      "captured": null,
+      "mark": "✪"
+    }
+  ]
+}
