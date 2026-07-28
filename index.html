@@ -1,43 +1,79 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ダイスチェス - 対戦モード選択</title>
+  <title>Dice Chess - Mode Select</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     body {
       background-image: url('./space-art-5626853_640.jpg');
       background-size: cover;
       background-position: center;
+      background-attachment: fixed;
     }
   </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body class="min-h-screen text-white">
+  <div class="min-h-screen bg-black/40 backdrop-blur-[2px] px-4 py-8 md:px-8">
+    <div class="max-w-5xl mx-auto">
+      <div class="mb-8 text-center md:text-left">
+        <h1 class="text-4xl md:text-5xl font-bold tracking-wide">Dice Chess</h1>
+        <p class="mt-2 text-white/75">Choose a mode</p>
+      </div>
 
-  <div class="bg-black bg-opacity-50 p-8 rounded-2xl backdrop-blur-sm text-white w-11/12 max-w-sm text-center space-y-6">
-    <h1 class="text-3xl font-bold mb-4">Dice Chess</h1>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+        <button onclick="location.href='login.html'"
+          class="group text-left rounded-3xl border border-white/10 bg-white/12 hover:bg-white/20 active:bg-white/25 transition shadow-xl p-5 md:p-6 min-h-40 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-white/60">Online</div>
+            <div class="mt-2 text-2xl font-semibold">Online Match</div>
+            <p class="mt-2 text-sm leading-relaxed text-white/70">Play against another player.</p>
+          </div>
+          <div class="mt-6 text-white/70 group-hover:text-white transition">→</div>
+        </button>
 
-    <button onclick="location.href='login.html'" 
-      class="w-full py-3 rounded-xl bg-white/20 hover:bg-white/30 text-lg font-semibold transition">
-      Online Match
-    </button>
+        <button onclick="location.href='bot.html'"
+          class="group text-left rounded-3xl border border-white/10 bg-white/12 hover:bg-white/20 active:bg-white/25 transition shadow-xl p-5 md:p-6 min-h-40 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-white/60">Vs Bot</div>
+            <div class="mt-2 text-2xl font-semibold">Bot Match</div>
+            <p class="mt-2 text-sm leading-relaxed text-white/70">Play against the computer.</p>
+          </div>
+          <div class="mt-6 text-white/70 group-hover:text-white transition">→</div>
+        </button>
 
-    <button onclick="location.href='bot.html'" 
-      class="w-full py-3 rounded-xl bg-white/20 hover:bg-white/30 text-lg font-semibold transition">
-      Bot Match
-    </button>
+        <button onclick="location.href='today_pazzle.html'"
+          class="group text-left rounded-3xl border border-white/10 bg-white/12 hover:bg-white/20 active:bg-white/25 transition shadow-xl p-5 md:p-6 min-h-40 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-white/60">Daily</div>
+            <div class="mt-2 text-2xl font-semibold">Today's Puzzle</div>
+            <p class="mt-2 text-sm leading-relaxed text-white/70">Solve today’s puzzle.</p>
+          </div>
+          <div class="mt-6 text-white/70 group-hover:text-white transition">→</div>
+        </button>
 
-    <button onclick="location.href='tsumeshogi.html'"
-      class="w-full py-3 rounded-xl bg-white/20 hover:bg-white/30 text-lg font-semibold transition">
-      Puzzles
-    </button>
-    
-    <button onclick="location.href='dice_quiz_48_en.html'"
-      class="w-full py-3 rounded-xl bg-white/20 hover:bg-white/30 text-lg font-semibold transition">
-      Quiz
-    </button>
+        <button onclick="location.href='tsumeshogi.html'"
+          class="group text-left rounded-3xl border border-white/10 bg-white/12 hover:bg-white/20 active:bg-white/25 transition shadow-xl p-5 md:p-6 min-h-40 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-white/60">Puzzles</div>
+            <div class="mt-2 text-2xl font-semibold">Puzzles</div>
+            <p class="mt-2 text-sm leading-relaxed text-white/70">Challenge yourself with problems.</p>
+          </div>
+          <div class="mt-6 text-white/70 group-hover:text-white transition">→</div>
+        </button>
+
+        <button onclick="location.href='dice_quiz_48_en.html'"
+          class="group text-left rounded-3xl border border-white/10 bg-white/12 hover:bg-white/20 active:bg-white/25 transition shadow-xl p-5 md:p-6 min-h-40 flex flex-col justify-between">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-white/60">Practice</div>
+            <div class="mt-2 text-2xl font-semibold">Quiz</div>
+            <p class="mt-2 text-sm leading-relaxed text-white/70">Practice dice states.</p>
+          </div>
+          <div class="mt-6 text-white/70 group-hover:text-white transition">→</div>
+        </button>
+      </div>
+    </div>
   </div>
-
 </body>
 </html>
