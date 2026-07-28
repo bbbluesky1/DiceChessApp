@@ -1,0 +1,3495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>棋譜シネマ編集室</title>
+  <style>
+    :root{
+      --bg:#07111f;
+      --panel: rgba(10,16,30,.76);
+      --panel-2: rgba(255,255,255,.05);
+      --line: rgba(255,255,255,.14);
+      --text:#f3f6ff;
+      --muted:#9fb0d1;
+      --accent:#7c5cff;
+      --accent-2:#2de2e6;
+      --good:#36d399;
+      --warn:#fbbf24;
+      --bad:#fb7185;
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --board-size: min(78vw, 680px);
+      --tile: calc(var(--board-size) / 8);
+      --white:#f7f7f1;
+      --black:#1f6f45;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(124,92,255,.22), transparent 36%),
+        radial-gradient(circle at 85% 20%, rgba(45,226,230,.16), transparent 24%),
+        linear-gradient(180deg, #02040a 0%, #07111f 50%, #030610 100%);
+      overflow-x:hidden;
+    }
+
+    body::before{
+      content:"";
+      position:fixed; inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.02) 1px, transparent 1px);
+      background-size: 36px 36px;
+      pointer-events:none;
+      mask-image: linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,0));
+    }
+
+    body.cinema-active::after{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:999;
+      background:
+        radial-gradient(circle at 50% 40%, rgba(255,255,255,.10), transparent 30%),
+        radial-gradient(circle at 16% 18%, rgba(45,226,230,.20), transparent 18%),
+        radial-gradient(circle at 82% 22%, rgba(124,92,255,.18), transparent 20%),
+        radial-gradient(circle at 50% 56%, transparent 46%, rgba(0,0,0,.52) 100%),
+        linear-gradient(180deg, rgba(45,226,230,.10), rgba(124,92,255,.08)),
+        linear-gradient(90deg, rgba(0,0,0,.10), rgba(255,255,255,.05), rgba(0,0,0,.16));
+      mix-blend-mode: soft-light;
+      backdrop-filter: contrast(1.34) saturate(1.48) brightness(.88) hue-rotate(-18deg) sepia(.08);
+      opacity:.98;
+    }
+
+    body.cinema-active::before{
+      background-image:
+        linear-gradient(rgba(255,255,255,.028) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px),
+        radial-gradient(circle at center, rgba(255,255,255,.04), rgba(255,255,255,0) 58%),
+        repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 3px);
+      background-size: 36px 36px, 36px 36px, 100% 100%, 100% 4px;
+      opacity:.28;
+      mix-blend-mode: overlay;
+      filter: contrast(1.25) brightness(.82);
+    }
+
+    body.cinema-active .main{
+      filter: contrast(1.18) saturate(1.32) brightness(.92) sepia(.07) hue-rotate(-7deg);
+    }
+
+    body.cinema-active .board-shell{
+      box-shadow: 0 30px 90px rgba(0,0,0,.44), inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+
+    .wrap{
+      min-height:100%;
+      display:grid;
+      grid-template-rows:auto 1fr;
+    }
+
+    header{
+      position:sticky; top:0; z-index:20;
+      backdrop-filter: blur(16px);
+      background: linear-gradient(180deg, rgba(5,8,18,.86), rgba(5,8,18,.58));
+      border-bottom: 1px solid var(--line);
+    }
+
+    .header-inner{
+      max-width: 1500px;
+      margin:0 auto;
+      padding: 18px 18px 14px;
+      display:flex;
+      gap:16px;
+      align-items:center;
+      justify-content:space-between;
+    }
+
+    .brand{
+      display:flex; flex-direction:column; gap:4px;
+    }
+
+    .brand h1{
+      margin:0;
+      font-size: clamp(20px, 2vw, 28px);
+      letter-spacing:.04em;
+      line-height:1;
+    }
+
+    .brand p{
+      margin:0;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .status-pill{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.05);
+      padding: 9px 14px;
+      border-radius:999px;
+      color:var(--muted);
+      font-size:13px;
+      user-select:none;
+      white-space:nowrap;
+    }
+
+    .main{
+      max-width:1500px;
+      width:100%;
+      margin:0 auto;
+      padding:18px;
+      display:grid;
+      grid-template-columns: minmax(320px, 1.15fr) minmax(320px, .85fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:24px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      backdrop-filter: blur(14px);
+    }
+
+    .panel-head{
+      padding:16px 18px 10px;
+      border-bottom:1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), transparent);
+    }
+
+    .panel-head h2{
+      margin:0;
+      font-size:18px;
+    }
+
+    .panel-head .sub{
+      margin-top:4px;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .panel-body{padding:16px 18px 18px}
+
+    .stage{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:16px;
+    }
+
+    .board-shell{
+      padding:16px;
+      border-radius:24px;
+      background:
+        radial-gradient(circle at 50% 0%, rgba(124,92,255,.18), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      border:1px solid var(--line);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .board-shell::after{
+      content:"";
+      position:absolute; inset:-40px;
+      background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.12) 50%, transparent 70%);
+      transform: translateX(-65%);
+      animation: scan 8s linear infinite;
+      pointer-events:none;
+      opacity:.55;
+    }
+
+    @keyframes scan{
+      0%{transform:translateX(-65%)}
+      100%{transform:translateX(65%)}
+    }
+
+    .board-wrap{
+      width:var(--board-size);
+      max-width:100%;
+      aspect-ratio:1/1;
+      margin:0 auto;
+      position:relative;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.15);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04), 0 24px 60px rgba(0,0,0,.35);
+      background:#111;
+      transform-origin: var(--cam-origin-x, 50%) var(--cam-origin-y, 50%);
+      --cam-origin-x: 50%;
+      --cam-origin-y: 50%;
+      will-change: transform, filter;
+      --cam-x: 0px;
+      --cam-y: 0px;
+      --cam-rot: 0deg;
+    }
+
+    .board-wrap.fx-zoom{
+      animation: cameraZoom .72s cubic-bezier(.08,.9,.12,1);
+    }
+    .board-wrap.fx-capture{
+      animation: cameraCapture .8s cubic-bezier(.08,.92,.12,1);
+    }
+    .board-wrap.fx-king{
+      animation: cameraKing .88s cubic-bezier(.08,.92,.12,1);
+    }
+
+    @keyframes cameraZoom{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      10%{transform:translate3d(calc(var(--cam-x) * .55), calc(var(--cam-y) * .55), 0) scale(1.22) rotate(calc(var(--cam-rot) * .35))}
+      28%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(1.48) rotate(var(--cam-rot))}
+      54%{transform:translate3d(calc(var(--cam-x) * .24), calc(var(--cam-y) * .24), 0) scale(1.34) rotate(calc(var(--cam-rot) * .18))}
+      78%{transform:translate3d(calc(var(--cam-x) * .12), calc(var(--cam-y) * .12), 0) scale(1.16) rotate(calc(var(--cam-rot) * .08))}
+      100%{transform:none}
+    }
+    @keyframes cameraCapture{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      8%{transform:translate3d(calc(var(--cam-x) * .62), calc(var(--cam-y) * .62), 0) scale(1.28) rotate(calc(var(--cam-rot) * .42))}
+      26%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(1.62) rotate(var(--cam-rot))}
+      50%{transform:translate3d(calc(var(--cam-x) * .28), calc(var(--cam-y) * .28), 0) scale(1.44) rotate(calc(var(--cam-rot) * .2))}
+      74%{transform:translate3d(calc(var(--cam-x) * .12), calc(var(--cam-y) * .12), 0) scale(1.2) rotate(calc(var(--cam-rot) * .08))}
+      100%{transform:none}
+    }
+    @keyframes cameraKing{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      8%{transform:translate3d(calc(var(--cam-x) * .6), calc(var(--cam-y) * .6), 0) scale(1.24) rotate(calc(var(--cam-rot) * .4))}
+      28%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(1.56) rotate(var(--cam-rot))}
+      52%{transform:translate3d(calc(var(--cam-x) * .32), calc(var(--cam-y) * .32), 0) scale(1.4) rotate(calc(var(--cam-rot) * .2))}
+      78%{transform:translate3d(calc(var(--cam-x) * .1), calc(var(--cam-y) * .1), 0) scale(1.12) rotate(calc(var(--cam-rot) * .06))}
+      100%{transform:none}
+    }
+
+    .board{
+      width:100%;
+      height:100%;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      grid-template-rows:repeat(8,1fr);
+    }
+
+    .sq{
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:700;
+      user-select:none;
+    }
+    .sq.white{background:var(--white)}
+    .sq.black{background:var(--black)}
+    .sq::before{
+      content:attr(data-rc);
+      position:absolute;
+      top:4px; left:4px;
+      font-size:10px;
+      color:rgba(0,0,0,.22);
+      letter-spacing:.03em;
+      display:none;
+    }
+
+    .piece{
+      width:78%;
+      height:78%;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:relative;
+      transform: translateZ(0);
+      border:1px solid rgba(255,255,255,.22);
+      box-shadow: 0 12px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.16);
+      transition: transform .28s ease, filter .28s ease;
+      animation: pop .28s ease;
+      overflow:visible;
+      isolation:isolate;
+    }
+
+    @keyframes pop{
+      from{transform:scale(.74); opacity:.35}
+      to{transform:scale(1); opacity:1}
+    }
+
+    .piece.white{
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,.95), rgba(255,255,255,.4) 36%, rgba(255,255,255,.04) 72%),
+        linear-gradient(180deg, #ffffff, #dfe7ff);
+      color:#0b1220;
+    }
+    .piece.black{
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,.16), rgba(255,255,255,.02) 36%, rgba(255,255,255,0) 72%),
+        linear-gradient(180deg, #1f2436, #080b13);
+      color:#f0f4ff;
+    }
+    .piece.white.king{
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,.96), rgba(255,255,255,.38) 34%, rgba(255,255,255,.04) 72%),
+        linear-gradient(180deg, #ef4444, #b91c1c);
+      color:#0b1220;
+      outline: 2px solid rgba(239,68,68,.98);
+      box-shadow: 0 0 0 3px rgba(239,68,68,.16), 0 0 28px rgba(239,68,68,.34), 0 12px 18px rgba(0,0,0,.22);
+    }
+
+    .piece.black.king{
+      background:
+        radial-gradient(circle at 28% 24%, rgba(255,255,255,.18), rgba(255,255,255,.03) 34%, rgba(255,255,255,0) 72%),
+        linear-gradient(180deg, #3b82f6, #1d4ed8);
+      color:#f0f4ff;
+      outline: 2px solid rgba(59,130,246,.98);
+      box-shadow: 0 0 0 3px rgba(59,130,246,.16), 0 0 28px rgba(59,130,246,.34), 0 12px 18px rgba(0,0,0,.22);
+    }
+
+    .pip-grid{
+      position:absolute;
+      inset:14%;
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 6%;
+      place-items:center;
+      z-index:1;
+    }
+
+    .pip{
+      width: 18%;
+      height: 18%;
+      min-width: 6px;
+      min-height: 6px;
+      border-radius:50%;
+      background: currentColor;
+      box-shadow: 0 0 8px rgba(0,0,0,.18);
+    }
+
+    .piece.king .pip{
+      box-shadow: 0 0 10px rgba(45,226,230,.22);
+    }
+
+.piece.badged::after{
+      content:attr(data-mark);
+      position:absolute;
+      top:-6px;
+      right:-8px;
+      min-width:18px;
+      height:18px;
+      padding:0 4px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:999px;
+      font-size: 10px;
+      font-weight: 900;
+      line-height: 1;
+      color:#fff;
+      background: var(--mark-bg, var(--accent-2));
+      border:1px solid var(--mark-border, rgba(255,255,255,.9));
+      box-shadow: var(--mark-shadow, 0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(45,226,230,.10), 0 0 8px rgba(45,226,230,.24));
+      z-index:60;
+      text-shadow:none;
+      pointer-events:none;
+      white-space:nowrap;
+      transform:none;
+    }
+
+    .piece.badged.mark-turquoise{--mark-bg:#2de2e6; --mark-border:rgba(255,255,255,.9); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(45,226,230,.10), 0 0 8px rgba(45,226,230,.24);}
+    .piece.badged.mark-blue{--mark-bg:#3b82f6; --mark-border:rgba(255,255,255,.88); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(59,130,246,.12), 0 0 8px rgba(59,130,246,.22);}
+    .piece.badged.mark-green{--mark-bg:#22c55e; --mark-border:rgba(255,255,255,.88); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(34,197,94,.12), 0 0 8px rgba(34,197,94,.22);}
+    .piece.badged.mark-yellow{--mark-bg:#fbbf24; --mark-border:rgba(255,255,255,.9); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(251,191,36,.12), 0 0 8px rgba(251,191,36,.24);}
+    .piece.badged.mark-orange{--mark-bg:#f59e0b; --mark-border:rgba(255,255,255,.88); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(245,158,11,.12), 0 0 8px rgba(245,158,11,.22);}
+    .piece.badged.mark-red{--mark-bg:#ef4444; --mark-border:rgba(255,255,255,.88); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(239,68,68,.12), 0 0 8px rgba(239,68,68,.22);}
+    .piece.badged.mark-softred{--mark-bg:#fca5a5; --mark-border:rgba(255,255,255,.88); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(252,165,165,.12), 0 0 8px rgba(252,165,165,.22);}
+    .piece.badged.mark-brown{--mark-bg:#8b5a2b; --mark-border:rgba(255,255,255,.84); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(139,90,43,.14), 0 0 8px rgba(139,90,43,.22);}
+    .piece.badged.mark-neutral{--mark-bg:#94a3b8; --mark-border:rgba(255,255,255,.84); --mark-shadow:0 7px 12px rgba(0,0,0,.20), 0 0 0 2px rgba(148,163,184,.14), 0 0 8px rgba(148,163,184,.22);}
+
+    .piece.capture{
+      animation: hit .56s ease, pulseGold .7s ease;
+    }
+    @keyframes hit{
+      0%{transform:scale(1)}
+      36%{transform:scale(1.11) rotate(-2deg)}
+      100%{transform:scale(1)}
+    }
+    @keyframes pulseGold{
+      0%,100%{filter:saturate(1)}
+      50%{filter:saturate(1.25) brightness(1.08)}
+    }
+
+    .board-wrap.fx-zoom{
+      animation: zoomCut .74s cubic-bezier(.10,.84,.16,1);
+    }
+    .board-wrap.fx-capture{
+      animation: zoomCapture .88s cubic-bezier(.10,.9,.14,1);
+    }
+    .board-wrap.fx-king{
+      animation: kingSurge .96s cubic-bezier(.12,.82,.14,1);
+    }
+    @keyframes zoomCut{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      10%{transform:translate3d(calc(var(--cam-x) * .28), calc(var(--cam-y) * .28), 0) scale(1.22) rotate(calc(var(--cam-rot) * .16))}
+      26%{transform:translate3d(calc(var(--cam-x) * .74), calc(var(--cam-y) * .74), 0) scale(1.78) rotate(calc(var(--cam-rot) * .62))}
+      42%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(2.15) rotate(var(--cam-rot))}
+      64%{transform:translate3d(calc(var(--cam-x) * .36), calc(var(--cam-y) * .36), 0) scale(1.72) rotate(calc(var(--cam-rot) * .28))}
+      84%{transform:translate3d(calc(var(--cam-x) * .12), calc(var(--cam-y) * .12), 0) scale(1.2) rotate(calc(var(--cam-rot) * .08))}
+      100%{transform:translate3d(0,0,0) scale(1.05) rotate(0deg)}
+    }
+    @keyframes zoomCapture{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      10%{transform:translate3d(calc(var(--cam-x) * .32), calc(var(--cam-y) * .32), 0) scale(1.28) rotate(calc(var(--cam-rot) * .18))}
+      26%{transform:translate3d(calc(var(--cam-x) * .82), calc(var(--cam-y) * .82), 0) scale(2.05) rotate(calc(var(--cam-rot) * .72))}
+      42%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(2.45) rotate(var(--cam-rot))}
+      66%{transform:translate3d(calc(var(--cam-x) * .4), calc(var(--cam-y) * .4), 0) scale(1.88) rotate(calc(var(--cam-rot) * .3))}
+      84%{transform:translate3d(calc(var(--cam-x) * .14), calc(var(--cam-y) * .14), 0) scale(1.24) rotate(calc(var(--cam-rot) * .1))}
+      100%{transform:translate3d(0,0,0) scale(1.06) rotate(0deg)}
+    }
+    @keyframes kingSurge{
+      0%{transform:translate3d(0,0,0) scale(1) rotate(0deg)}
+      10%{transform:translate3d(calc(var(--cam-x) * .3), calc(var(--cam-y) * .3), 0) scale(1.24) rotate(calc(var(--cam-rot) * .16))}
+      26%{transform:translate3d(calc(var(--cam-x) * .8), calc(var(--cam-y) * .8), 0) scale(1.95) rotate(calc(var(--cam-rot) * .68))}
+      42%{transform:translate3d(var(--cam-x), var(--cam-y), 0) scale(2.3) rotate(var(--cam-rot))}
+      66%{transform:translate3d(calc(var(--cam-x) * .4), calc(var(--cam-y) * .4), 0) scale(1.82) rotate(calc(var(--cam-rot) * .28))}
+      84%{transform:translate3d(calc(var(--cam-x) * .14), calc(var(--cam-y) * .14), 0) scale(1.22) rotate(calc(var(--cam-rot) * .08))}
+      100%{transform:translate3d(0,0,0) scale(1.06) rotate(0deg)}
+    }
+
+    .burst-layer{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      overflow:hidden;
+      z-index:8;
+    }
+
+    .burst{
+      position:absolute;
+      left:50%;
+      top:48%;
+      transform: translate(-50%, -50%);
+      font-size: clamp(28px, 4.6vw, 62px);
+      font-weight: 900;
+      letter-spacing: .08em;
+      white-space: nowrap;
+      text-shadow:
+        0 0 8px rgba(255,255,255,.4),
+        0 0 20px rgba(255,255,255,.18),
+        0 0 36px rgba(0,0,0,.45);
+      animation: burstPop .88s ease-out forwards;
+      mix-blend-mode: screen;
+    }
+
+    .burst.capture{
+      color: #ffe86b;
+    }
+    .burst.king{
+      color: #7efcff;
+    }
+    .burst.normal{
+      color: #ffffff;
+    }
+
+    @keyframes burstPop{
+      0%{opacity:0; transform:translate(-50%, -50%) scale(.45) rotate(-8deg)}
+      18%{opacity:1}
+      65%{transform:translate(-50%, -56%) scale(1.08) rotate(2deg)}
+      100%{opacity:0; transform:translate(-50%, -76%) scale(1.45) rotate(8deg)}
+    }
+
+    .burst-spark{
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 50% 50%, rgba(255,255,255,.24), transparent 28%),
+        radial-gradient(circle at 40% 46%, rgba(126,252,255,.18), transparent 20%),
+        radial-gradient(circle at 60% 54%, rgba(255,232,107,.18), transparent 20%);
+      animation: sparkFade .88s ease-out forwards;
+    }
+
+    @keyframes sparkFade{
+      0%{opacity:0; transform:scale(.7)}
+      18%{opacity:1}
+      100%{opacity:0; transform:scale(1.35)}
+    }
+
+    .mask{
+      position:absolute; inset:0;
+      pointer-events:none;
+      background:
+        radial-gradient(circle at center, transparent 42%, rgba(0,0,0,.15) 100%);
+      mix-blend-mode:multiply;
+    }
+
+        .fx{
+      display:none;
+    }
+
+    .move-caption{
+      position:absolute;
+      z-index:30;
+      padding:8px 12px;
+      border-radius:12px;
+      background: rgba(5,8,18,.82);
+      color:#fff;
+      font-weight:800;
+      font-size:12px;
+      line-height:1;
+      white-space:nowrap;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow: 0 10px 24px rgba(0,0,0,.28);
+      text-shadow: 0 1px 2px rgba(0,0,0,.35);
+      pointer-events:none;
+      transform: translateY(-50%);
+      backdrop-filter: blur(8px);
+    }
+
+    .fx .caption{
+      padding:10px 14px;
+      border-radius:14px;
+      background: linear-gradient(135deg, rgba(124,92,255,.85), rgba(45,226,230,.65));
+      color:#fff;
+      font-weight:800;
+      letter-spacing:.06em;
+      text-shadow: 0 2px 8px rgba(0,0,0,.28);
+      box-shadow: 0 16px 40px rgba(0,0,0,.28);
+      transform: skewX(-8deg);
+      animation: slidein .35s ease;
+    }
+    @keyframes slidein{
+      from{opacity:0; transform:translateY(10px) skewX(-8deg)}
+      to{opacity:1; transform:translateY(0) skewX(-8deg)}
+    }
+
+    .fx .counter{
+      padding:8px 12px;
+      border-radius:999px;
+      background: rgba(5,8,18,.66);
+      border:1px solid rgba(255,255,255,.13);
+      font-size:12px;
+      color:var(--text);
+      backdrop-filter: blur(10px);
+    }
+
+    .timeline{
+      display:flex;
+      gap:10px;
+      overflow:auto;
+      padding:4px 2px 8px;
+      scrollbar-width:thin;
+    }
+
+    .move-card{
+      min-width: 132px;
+      border-radius:16px;
+      padding:12px;
+      background: rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.09);
+      cursor:pointer;
+      transition:.2s ease;
+    }
+    .move-card:hover{transform:translateY(-2px); border-color:rgba(255,255,255,.2)}
+    .move-card.active{
+      background: linear-gradient(135deg, rgba(124,92,255,.28), rgba(45,226,230,.16));
+      border-color:rgba(255,255,255,.28);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    .move-card .n{font-size:12px; color:var(--muted); margin-bottom:6px}
+    .move-card .mv{font-size:14px; font-weight:700; line-height:1.35}
+    .move-card .tag{
+      margin-top:8px;
+      font-size:11px;
+      color:#cce6ff;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      width:fit-content;
+      min-width:28px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      line-height:1;
+      letter-spacing:.02em;
+    }
+    .move-card .tag.mark-turquoise{background:rgba(45,226,230,.16); color:#8ef7fa; border-color:rgba(45,226,230,.28)}
+    .move-card .tag.mark-blue{background:rgba(59,130,246,.16); color:#bfdbfe; border-color:rgba(59,130,246,.28)}
+    .move-card .tag.mark-green{background:rgba(34,197,94,.16); color:#bbf7d0; border-color:rgba(34,197,94,.28)}
+    .move-card .tag.mark-yellow{background:rgba(251,191,36,.16); color:#fef3c7; border-color:rgba(251,191,36,.28)}
+    .move-card .tag.mark-orange{background:rgba(245,158,11,.16); color:#fde68a; border-color:rgba(245,158,11,.28)}
+    .move-card .tag.mark-red{background:rgba(239,68,68,.16); color:#fecaca; border-color:rgba(239,68,68,.28)}
+    .move-card .tag.mark-softred{background:rgba(252,165,165,.16); color:#fecdd3; border-color:rgba(252,165,165,.28)}
+    .move-card .tag.mark-brown{background:rgba(139,90,43,.18); color:#e7c59f; border-color:rgba(139,90,43,.28)}
+    .move-card .tag.mark-neutral{background:rgba(148,163,184,.12); color:#e2e8f0; border-color:rgba(148,163,184,.22)}
+
+    .controls{
+      display:grid;
+      gap:14px;
+    }
+
+    .group{
+      display:grid;
+      gap:10px;
+      padding:14px;
+      border-radius:18px;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+
+    .group label{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+
+    textarea,input[type="file"],input[type="range"],select{
+      width:100%;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(4,7,16,.7);
+      color:var(--text);
+      padding:12px;
+      outline:none;
+      font: inherit;
+    }
+
+    textarea{
+      min-height: 220px;
+      resize: vertical;
+      line-height:1.45;
+    }
+
+    .buttons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    button{
+      border:none;
+      border-radius:14px;
+      padding:11px 14px;
+      background: linear-gradient(135deg, rgba(124,92,255,.95), rgba(45,226,230,.8));
+      color:white;
+      font-weight:800;
+      cursor:pointer;
+      box-shadow: 0 12px 24px rgba(0,0,0,.2);
+      transition: transform .18s ease, filter .18s ease;
+    }
+    button.secondary{
+      background: rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.12);
+      box-shadow:none;
+    }
+    button:hover{transform:translateY(-1px)}
+    button:disabled{opacity:.5; cursor:not-allowed; transform:none}
+
+    .download-link{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      border-radius:14px;
+      padding:11px 14px;
+      background: linear-gradient(135deg, rgba(45,226,230,.95), rgba(124,92,255,.82));
+      color:white;
+      font-weight:800;
+      text-decoration:none;
+      box-shadow: 0 12px 24px rgba(0,0,0,.2);
+      border:1px solid rgba(255,255,255,.10);
+      transition: transform .18s ease, filter .18s ease, opacity .18s ease;
+    }
+    .download-link:hover{transform:translateY(-1px); filter:brightness(1.05)}
+    .download-link[hidden]{display:none !important;}
+
+    .range-row{
+      display:grid;
+      gap:8px;
+    }
+    .range-row .row{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .meta-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0,1fr));
+      gap:10px;
+    }
+    .stat{
+      padding:12px;
+      border-radius:16px;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.09);
+    }
+    .stat .k{font-size:11px; color:var(--muted)}
+    .stat .v{font-size:18px; font-weight:800; margin-top:4px}
+
+    .hint{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    .subtitle{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
+    }
+
+    .preview-strip{
+      display:flex;
+      gap:10px;
+      overflow:auto;
+      margin-top:10px;
+      padding-bottom:4px;
+    }
+    .thumb{
+      min-width:120px;
+      max-width:120px;
+      border-radius:14px;
+      padding:10px;
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.09);
+      color:var(--text);
+      font-size:12px;
+    }
+    .thumb strong{display:block; font-size:13px; margin-bottom:6px}
+    .thumb .small{color:var(--muted); font-size:11px; line-height:1.5}
+
+    .footer-note{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.6;
+    }
+
+    @media (max-width: 1100px){
+      .main{grid-template-columns:1fr}
+      .board-wrap{--board-size:min(92vw, 680px)}
+      .meta-grid{grid-template-columns: repeat(2, minmax(0,1fr))}
+    }
+
+    @media (max-width: 640px){
+      .header-inner{flex-direction:column; align-items:flex-start}
+      .meta-grid{grid-template-columns:1fr 1fr}
+      .buttons button{flex:1}
+      .panel-head{flex-direction:column; align-items:flex-start}
+    }
+
+    .shake{animation: shake .18s linear 2}
+    @keyframes shake{
+      0%{transform:translate(0,0)}
+      25%{transform:translate(1px,-1px)}
+      50%{transform:translate(-1px,1px)}
+      75%{transform:translate(1px,1px)}
+      100%{transform:translate(0,0)}
+    }
+
+    .glow{
+      box-shadow: 0 0 0 1px rgba(45,226,230,.2), 0 0 60px rgba(45,226,230,.12), var(--shadow);
+    }
+
+    .speed-pill{
+      font-size:12px;
+      color:var(--muted);
+      background: rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:999px;
+      padding:6px 10px;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="header-inner">
+      <div class="brand">
+        <h1>棋譜シネマ編集室</h1>
+        <p>棋譜を読み込んで、テンポ・字幕・カメラ感をつけた“編集動画風”リプレイを作るHTML</p>
+      </div>
+      <div class="status-pill">MP4 / Cinematic</div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>シーンプレビュー</h2>
+          <div class="sub">再生すると、カットイン・字幕・移動ハイライトが自動で切り替わります。</div>
+        </div>
+        <div class="speed-pill" id="speedLabel">1.0x</div>
+      </div>
+      <div class="panel-body stage">
+        <div class="board-shell" id="boardShell">
+          <div class="board-wrap" id="boardWrap">
+            <div class="board" id="board"></div>
+            <div class="mask"></div>
+            <div class="burst-layer" id="burstLayer"></div>
+            <div class="fx" aria-hidden="true"></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <label>
+            <span>タイムライン</span>
+            <span id="moveCountText">0 moves</span>
+          </label>
+          <div class="timeline" id="timeline"></div>
+        </div>
+
+        <div class="group">
+          <div class="meta-grid">
+            <div class="stat"><div class="k">現在手</div><div class="v" id="statTurn">-</div></div>
+            <div class="stat"><div class="k">再生位置</div><div class="v" id="statIndex">0</div></div>
+            <div class="stat"><div class="k">キャプチャ</div><div class="v" id="statCapture">0</div></div>
+            <div class="stat"><div class="k">総シーン</div><div class="v" id="statScenes">0</div></div>
+          </div>
+          <div class="footer-note" id="moveDesc">棋譜を読み込むと、ここに“編集っぽい”説明が出ます。</div>
+        </div>
+
+        <div class="buttons">
+          <button id="playBtn">▶ 再生</button>
+          <button class="secondary" id="pauseBtn">⏸ 一時停止</button>
+          <button class="secondary" id="prevBtn">⏮ 前へ</button>
+          <button class="secondary" id="nextBtn">⏭ 次へ</button>
+          <button class="secondary" id="resetBtn">↺ リセット</button>
+          <button class="secondary" id="exportBtn">🎬 音声付きMP4</button>
+          <a class="download-link" id="downloadLink" href="#" download hidden aria-disabled="true">⬇ ダウンロード</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>棋譜インポート & 演出設定</h2>
+          <div class="sub">カスタム形式でもJSONでもOK。棋譜動画っぽいテンポに自動変換します。</div>
+        </div>
+      </div>
+      <div class="panel-body controls">
+        <div class="group">
+          <label><span>棋譜ファイル</span><span>カスタム形式 / JSON 両対応</span></label>
+          <input type="file" id="fileInput" accept=".json,.txt,application/json,text/plain" />
+          <div class="hint">おすすめ形式は <code>{ initialSetup: [...], moves: [...] }</code> のJSONです。<br/>単独の <code>moves</code> 配列や、1行1手の従来テキストも読み込めます。</div>
+        </div>
+
+        <div class="group">
+          <label><span>初期盤面</span><span id="boardStatus">sample loaded</span></label>
+          <textarea id="boardInput" spellcheck="false" placeholder="8×8のJSON配列、または8行×8列。JSONの initialSetup でもOK"></textarea>
+          <div class="hint">ここには <strong>8×8の配列JSON</strong> か、従来どおりの8行×8列テキストを貼れます。<br/>まとめて読む場合は <code>{ initialSetup: [...], moves: [...] }</code> の形でもOKです。</div>
+        </div>
+
+        <div class="group">
+          <label><span>棋譜テキスト</span><span id="jsonStatus">sample loaded</span></label>
+          <textarea id="jsonInput" spellcheck="false"></textarea>
+          <div class="buttons">
+            <button id="loadBtn">棋譜を読み込む</button>
+            <button class="secondary" id="sampleBtn">サンプルに戻す</button>
+          </div>
+        </div>
+
+        <div class="group">
+          <label><span>テンポ</span><span id="speedValue">1.0x</span></label>
+          <div class="range-row">
+            <input type="range" id="speedRange" min="0.5" max="2.5" step="0.1" value="1.3" />
+            <div class="row"><span>ゆっくり</span><span>速い</span></div>
+          </div>
+        </div>
+
+        <div class="group">
+          <label><span>カメラ感</span><span>演出切替</span></label>
+          <select id="effectSelect">
+            <option value="cinema">Cinema</option>
+            <option value="impact">Impact</option>
+            <option value="clean">Clean</option>
+          </select>
+          <div class="buttons">
+            <button class="secondary" id="autoPlayBtn">読込後に自動再生</button>
+            <button class="secondary" id="loopBtn">ループ OFF</button>
+          </div>
+        </div>
+
+
+        <div class="hint" id="exportHint">
+          このHTMLは「棋譜を読んで、見せ場を作る」ためのシネマUIです。<br/>
+          英語読み上げ付きMP4を書き出します。
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const SIZE = 8;
+const boardEl = document.getElementById('board');
+const timelineEl = document.getElementById('timeline');
+const boardInput = document.getElementById('boardInput');
+const jsonInput = document.getElementById('jsonInput');
+const fileInput = document.getElementById('fileInput');
+const playBtn = document.getElementById('playBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+const resetBtn = document.getElementById('resetBtn');
+const exportBtn = document.getElementById('exportBtn');
+const downloadLink = document.getElementById('downloadLink');
+const loadBtn = document.getElementById('loadBtn');
+const sampleBtn = document.getElementById('sampleBtn');
+const speedRange = document.getElementById('speedRange');
+const speedLabel = document.getElementById('speedLabel');
+const speedValue = document.getElementById('speedValue');
+const effectSelect = document.getElementById('effectSelect');
+const autoPlayBtn = document.getElementById('autoPlayBtn');
+const loopBtn = document.getElementById('loopBtn');
+const boardShell = document.getElementById('boardShell');
+const boardWrap = document.getElementById('boardWrap');
+const burstLayer = document.getElementById('burstLayer');
+const moveDesc = document.getElementById('moveDesc');
+const moveCountText = document.getElementById('moveCountText');
+const statTurn = document.getElementById('statTurn');
+const statIndex = document.getElementById('statIndex');
+const statCapture = document.getElementById('statCapture');
+const statScenes = document.getElementById('statScenes');
+const jsonStatus = document.getElementById('jsonStatus');
+const boardStatus = document.getElementById('boardStatus');
+
+
+window.__mediabunnyPromise ??= import('https://cdn.jsdelivr.net/npm/mediabunny@1.42.0/+esm');
+const mediabunnyPromise = window.__mediabunnyPromise;
+
+const ORIENTATION_STARTS = [
+  { name: 'α', U: 4, D: 3, F: 5, B: 2, R: 1, L: 6 },
+  { name: 'β', U: 4, D: 3, F: 5, B: 2, R: 6, L: 1 },
+];
+
+function dieKey(die) {
+  return `${die.U},${die.D},${die.F},${die.B},${die.R},${die.L}`;
+}
+
+function rotateLeft(s) {
+  return { U: s.R, D: s.L, F: s.F, B: s.B, R: s.D, L: s.U };
+}
+function rotateRight(s) {
+  return { U: s.L, D: s.R, F: s.F, B: s.B, R: s.U, L: s.D };
+}
+function rotateFront(s) {
+  return { U: s.B, D: s.F, F: s.U, B: s.D, R: s.R, L: s.L };
+}
+function rotateBack(s) {
+  return { U: s.F, D: s.B, F: s.D, B: s.U, R: s.R, L: s.L };
+}
+
+function buildOrientationMap(start) {
+  const moves = [rotateLeft, rotateRight, rotateFront, rotateBack];
+  const queue = [{ ...start }];
+  const visited = new Set();
+  const states = [];
+  while (queue.length) {
+    const s = queue.shift();
+    const k = dieKey(s);
+    if (visited.has(k)) continue;
+    visited.add(k);
+    states.push({ ...s });
+    for (const move of moves) {
+      queue.push(move(s));
+    }
+  }
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const map = new Map();
+  states.forEach((s, i) => map.set(dieKey(s), letters[i]));
+  return { states, map };
+}
+
+const ORIENTATION_MAPS = Object.fromEntries(
+  ORIENTATION_STARTS.map((start) => [start.name, buildOrientationMap(start)])
+);
+
+const BOT2_INITIAL_ORIENTATIONS = {
+  white: {
+    1: { U: 1, D: 6, F: 2, B: 5, R: 3, L: 4 },
+    2: { U: 2, D: 5, F: 6, B: 1, R: 3, L: 4 },
+    3: { U: 3, D: 4, F: 2, B: 5, R: 1, L: 6 },
+    4: { U: 4, D: 3, F: 2, B: 5, R: 6, L: 1 },
+    5: { U: 5, D: 2, F: 1, B: 6, R: 3, L: 4 },
+    6: { U: 6, D: 1, F: 5, B: 2, R: 3, L: 4 },
+  },
+  black: {
+    1: { U: 1, D: 6, F: 5, B: 2, R: 4, L: 3 },
+    2: { U: 2, D: 5, F: 1, B: 6, R: 4, L: 3 },
+    3: { U: 3, D: 4, F: 5, B: 2, R: 6, L: 1 },
+    4: { U: 4, D: 3, F: 5, B: 2, R: 1, L: 6 },
+    5: { U: 5, D: 2, F: 6, B: 1, R: 4, L: 3 },
+    6: { U: 6, D: 1, F: 2, B: 5, R: 4, L: 3 },
+  },
+};
+
+function mirrorOrientationState(state) {
+  const s = cloneOrientationState(state);
+  if (!s) return null;
+  return { U: s.U, D: s.D, F: s.B, B: s.F, R: s.L, L: s.R };
+}
+
+function cloneOrientationState(state) {
+  if (!state) return null;
+  if (Array.isArray(state)) return cloneOrientationState(state[0]);
+  if (typeof state !== 'object') return null;
+  const out = {
+    U: Number(state.U),
+    D: Number(state.D),
+    F: Number(state.F),
+    B: Number(state.B),
+    R: Number(state.R),
+    L: Number(state.L),
+  };
+  if (![out.U, out.D, out.F, out.B, out.R, out.L].every(Number.isFinite)) return null;
+  return out;
+}
+
+function isFullOrientationState(value) {
+  return !!(value && typeof value === 'object'
+    && ['U','D','F','B','R','L'].every(k => Number.isFinite(Number(value[k]))));
+}
+
+const FACE_OPPOSITES = {
+  1: 6, 6: 1,
+  2: 5, 5: 2,
+  3: 4, 4: 3,
+};
+
+function getOrientationState(value) {
+  if (!value) return null;
+  if (value.orientation) return getOrientationState(value.orientation);
+  if (isFullOrientationState(value)) return cloneOrientationState(value);
+  if (
+    ['top', 'front', 'right', 'U', 'F', 'R'].some(k => value[k] != null)
+  ) {
+    const top = Number(value.top ?? value.U);
+    const front = Number(value.front ?? value.F);
+    const right = Number(value.right ?? value.R);
+    if (Number.isFinite(top) && Number.isFinite(front) && Number.isFinite(right)) {
+      const bottom = FACE_OPPOSITES[top];
+      const back = FACE_OPPOSITES[front];
+      const left = FACE_OPPOSITES[right];
+      if ([bottom, back, left].every(Number.isFinite)) {
+        return cloneOrientationState({ U: top, D: bottom, F: front, B: back, R: right, L: left });
+      }
+    }
+  }
+  return null;
+}
+
+function pickInitialOrientationState(top, player) {
+  const side = (player || 'white').toLowerCase();
+  const topNum = Number(top);
+  const exact = BOT2_INITIAL_ORIENTATIONS[side]?.[topNum];
+  if (exact) return cloneOrientationState(exact);
+
+  const pattern = side === 'black' ? 'β' : 'α';
+  const states = ORIENTATION_MAPS[pattern]?.states || [];
+  const match = states.find((s) => Number(s.U) === topNum);
+  return cloneOrientationState(match || states[0] || null);
+}
+
+function buildInitialOrientationState(pieceLike, player) {
+  const source = getOrientationState(pieceLike);
+  if (source) return source;
+
+  const top = Number(pieceLike?.top ?? pieceLike?.U);
+  const front = Number(pieceLike?.front ?? pieceLike?.F);
+  const right = Number(pieceLike?.right ?? pieceLike?.R);
+  if (Number.isFinite(top) && Number.isFinite(front) && Number.isFinite(right)) {
+    const bottom = FACE_OPPOSITES[top];
+    const back = FACE_OPPOSITES[front];
+    const left = FACE_OPPOSITES[right];
+    if ([bottom, back, left].every(Number.isFinite)) {
+      return cloneOrientationState({ U: top, D: bottom, F: front, B: back, R: right, L: left });
+    }
+  }
+
+  return pickInitialOrientationState(top, player);
+}
+
+function rotateOrientationByDirection(state, direction) {
+  const base = cloneOrientationState(state);
+  if (!base) return null;
+  if (direction === 'left') return rotateLeft(base);
+  if (direction === 'right') return rotateRight(base);
+  if (direction === 'front') return rotateFront(base);
+  if (direction === 'back') return rotateBack(base);
+  return base;
+}
+
+function advanceOrientationByMove(state, move) {
+  const base = cloneOrientationState(state);
+  if (!base || !move?.from || !move?.to) return base;
+
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  const dr = tr - fr;
+  const dc = tc - fc;
+  const steps = Math.max(Math.abs(dr), Math.abs(dc));
+  if (!steps) return base;
+
+  const player = (move.player || base.player || 'white').toLowerCase();
+  const isBlack = player === 'black';
+
+  let direction = null;
+  if (Math.abs(dr) >= Math.abs(dc)) {
+    // pjpmt の front/back は「敵側 / 自分側」なので、盤面の行方向が前後になる
+    // 白: 上方向が front、下方向が back
+    // 黒: 下方向が front、上方向が back
+    direction = isBlack
+      ? (dr > 0 ? 'front' : 'back')
+      : (dr > 0 ? 'back' : 'front');
+  } else {
+    // pjpmt の right/left は「自分から見た右手側 / 左手側」なので、盤面の列方向が左右になる
+    // 白: 右方向が right、左方向が left
+    // 黒: 右方向が left、左方向が right
+    direction = isBlack
+      ? (dc > 0 ? 'left' : 'right')
+      : (dc > 0 ? 'right' : 'left');
+  }
+
+  let out = base;
+  for (let i = 0; i < steps; i++) {
+    out = rotateOrientationByDirection(out, direction);
+  }
+  return out;
+}
+
+function orientationLabelFromValue(value, playerHint) {
+  const state = getOrientationState(value);
+  if (!state) {
+    const pattern = (((value && value.player) || playerHint) === 'black') ? 'β' : 'α';
+    return { pattern, id: '?' };
+  }
+  return currentOrientationLabel(state, playerHint);
+}
+
+function moveOrientationValue(move, key) {
+  return move?.[key] || null;
+}
+
+function lookupOrientationPattern(state) {
+  const lookupState = getOrientationState(state) || cloneOrientationState(state);
+  if (!lookupState) return null;
+
+  const key = dieKey(lookupState);
+  for (const [pattern, data] of Object.entries(ORIENTATION_MAPS)) {
+    if (data?.map?.has(key)) return pattern;
+  }
+  return null;
+}
+
+function currentPatternName(pieceOrState, playerHint = null) {
+  const state = getOrientationState(pieceOrState) || getOrientationState(pieceOrState?.orientation);
+  if (state) {
+    const mirrored = mirrorOrientationState(state);
+    const pattern = lookupOrientationPattern(state);
+    if (pattern) return pattern;
+    const mirroredPattern = lookupOrientationPattern(mirrored);
+    if (mirroredPattern) return mirroredPattern;
+  }
+
+  const player = (pieceOrState && pieceOrState.player) || playerHint || 'white';
+  return player === 'black' ? 'β' : 'α';
+}
+
+function currentOrientationLabel(pieceOrState, playerHint = null) {
+  if (!pieceOrState) return { pattern: playerHint === 'black' ? 'β' : 'α', id: '?' };
+
+  const state = getOrientationState(pieceOrState) || getOrientationState(pieceOrState?.orientation);
+  if (!state) {
+    const pattern = currentPatternName(pieceOrState, playerHint);
+    return { pattern, id: '?' };
+  }
+
+  const player = (pieceOrState && pieceOrState.player) || playerHint || 'white';
+  const lookupState = player === 'black' ? mirrorOrientationState(state) : state;
+
+  let pattern = lookupOrientationPattern(lookupState);
+  if (!pattern) pattern = currentPatternName(pieceOrState, playerHint);
+
+  const map = ORIENTATION_MAPS[pattern]?.map;
+  const id = lookupState && map ? (map.get(dieKey(lookupState)) || '?') : '?';
+  return { pattern, id };
+}
+
+function getMoveSourceOrientationState(move) {
+  if (!move) return null;
+  return (
+    getOrientationState(move.orientationBefore)
+    || getOrientationState(move.beforeOrientation)
+    || getOrientationState(move.pieceBefore?.orientation)
+    || getOrientationState(move.sourceOrientation)
+    || null
+  );
+}
+
+function moveSourceOrientationLabel(move) {
+  const source = getMoveSourceOrientationState(move);
+  if (!source) {
+    return { pattern: (move?.player || 'white') === 'black' ? 'β' : 'α', id: '?' };
+  }
+  return currentOrientationLabel(source, move?.player);
+}
+
+function moveVoiceNotation(move) {
+  if (!move) return '';
+  const square = rcToAlg(move.to[0], move.to[1]);
+  const label = moveSourceOrientationLabel(move);
+  return `${label.pattern}${label.id} ${square}`;
+}
+
+function moveSpeechText(move) {
+  if (!move) return '';
+  const square = rcToAlg(move.to[0], move.to[1]).toLowerCase();
+  const label = moveSourceOrientationLabel(move);
+  const patternWord = PATTERN_WORDS[label.pattern] || label.pattern;
+  const idWord = LETTER_WORDS[label.id] || label.id;
+  return `${patternWord} ${idWord} ${square}`.trim();
+}
+
+
+
+const FILE_WORDS = {
+  A: 'ay',
+  B: 'bee',
+  C: 'see',
+  D: 'dee',
+  E: 'ee',
+  F: 'eff',
+  G: 'gee',
+  H: 'aitch',
+};
+
+const RANK_WORDS = {
+  '1': 'one',
+  '2': 'two',
+  '3': 'three',
+  '4': 'four',
+  '5': 'five',
+  '6': 'six',
+  '7': 'seven',
+  '8': 'eight',
+};
+
+const LETTER_WORDS = {
+  A: 'ay',
+  B: 'bee',
+  C: 'see',
+  D: 'dee',
+  E: 'ee',
+  F: 'eff',
+  G: 'gee',
+  H: 'aitch',
+  I: 'eye',
+  J: 'jay',
+  K: 'kay',
+  L: 'el',
+  M: 'em',
+  N: 'en',
+  O: 'oh',
+  P: 'pee',
+  Q: 'cue',
+  R: 'ar',
+  S: 'ess',
+  T: 'tee',
+  U: 'you',
+  V: 'vee',
+  W: 'double you',
+  X: 'ex',
+  Y: 'why',
+  Z: 'zee',
+};
+
+const PATTERN_WORDS = {
+  α: 'alpha',
+  β: 'beta',
+};
+
+const WORD_PHONEMES = {
+  ay: ['EY'],
+  bee: ['B', 'IY'],
+  see: ['S', 'IY'],
+  dee: ['D', 'IY'],
+  ee: ['IY'],
+  eff: ['EH', 'F'],
+  gee: ['JH', 'IY'],
+  aitch: ['EY', 'CH'],
+  alpha: ['AE', 'L', 'F', 'AH'],
+  beta: ['B', 'EY', 'T', 'AH'],
+  one: ['W', 'AH', 'N'],
+  two: ['T', 'UW'],
+  three: ['TH', 'R', 'IY'],
+  four: ['F', 'AO', 'R'],
+  five: ['F', 'AY', 'V'],
+  six: ['S', 'IH', 'K', 'S'],
+  seven: ['S', 'EH', 'V', 'AH', 'N'],
+  eight: ['EY', 'T'],
+  bravo: ['B', 'R', 'AA', 'V', 'OW'],
+  charlie: ['CH', 'AA', 'R', 'L', 'IY'],
+  delta: ['D', 'EH', 'L', 'T', 'AH'],
+  echo: ['EH', 'K', 'OW'],
+  foxtrot: ['F', 'AA', 'K', 'S', 'T', 'R', 'AA', 'T'],
+  golf: ['G', 'AO', 'L', 'F'],
+  hotel: ['HH', 'OW', 'T', 'EH', 'L'],
+  india: ['IH', 'N', 'D', 'IY', 'AH'],
+  juliet: ['JH', 'UW', 'L', 'IY', 'EH', 'T'],
+  kilo: ['K', 'IY', 'L', 'OW'],
+  lima: ['L', 'IY', 'M', 'AH'],
+  mike: ['M', 'AY', 'K'],
+  november: ['N', 'OW', 'V', 'EH', 'M', 'B', 'ER'],
+  oscar: ['AA', 'S', 'K', 'ER'],
+  papa: ['P', 'AH', 'P', 'AA'],
+  quebec: ['K', 'W', 'EH', 'B', 'EH', 'K'],
+  romeo: ['R', 'OW', 'M', 'IY', 'OW'],
+  sierra: ['S', 'IY', 'EH', 'R', 'AH'],
+  tango: ['T', 'AE', 'NG', 'G', 'OW'],
+  uniform: ['Y', 'UW', 'N', 'IH', 'F', 'AO', 'R', 'M'],
+  victor: ['V', 'IH', 'K', 'T', 'ER'],
+  whiskey: ['W', 'IH', 'S', 'K', 'IY'],
+  xray: ['EH', 'K', 'S', 'R', 'EY'],
+  yankee: ['Y', 'AE', 'NG', 'K', 'IY'],
+  zulu: ['Z', 'UW', 'L', 'UW'],
+};
+
+const PHONEME_INFO = {
+  AE: { voiced: true, kind: 'vowel', f1: 820, f2: 1760, f3: 2450, dur: 1.00 },
+  AH: { voiced: true, kind: 'vowel', f1: 560, f2: 1480, f3: 2500, dur: 0.95 },
+  AA: { voiced: true, kind: 'vowel', f1: 700, f2: 1200, f3: 2600, dur: 1.00 },
+  AO: { voiced: true, kind: 'vowel', f1: 520, f2: 900, f3: 2400, dur: 0.96 },
+  EH: { voiced: true, kind: 'vowel', f1: 600, f2: 1880, f3: 2550, dur: 0.96 },
+  EY: { voiced: true, kind: 'vowel', f1: 500, f2: 2000, f3: 2800, dur: 1.02 },
+  IH: { voiced: true, kind: 'vowel', f1: 420, f2: 2050, f3: 2850, dur: 0.88 },
+  IY: { voiced: true, kind: 'vowel', f1: 350, f2: 2200, f3: 2900, dur: 0.90 },
+  OW: { voiced: true, kind: 'vowel', f1: 460, f2: 900, f3: 2400, dur: 0.98 },
+  UW: { voiced: true, kind: 'vowel', f1: 310, f2: 875, f3: 2350, dur: 0.94 },
+  AY: { voiced: true, kind: 'vowel', f1: 500, f2: 1700, f3: 2500, dur: 1.00 },
+  ER: { voiced: true, kind: 'vowel', f1: 480, f2: 1300, f3: 1700, dur: 0.88 },
+
+  L: { voiced: true, kind: 'sonorant', f1: 400, f2: 1100, f3: 2400, dur: 0.42 },
+  M: { voiced: true, kind: 'sonorant', f1: 300, f2: 1000, f3: 2100, dur: 0.40 },
+  N: { voiced: true, kind: 'sonorant', f1: 320, f2: 1200, f3: 2200, dur: 0.42 },
+  R: { voiced: true, kind: 'sonorant', f1: 370, f2: 1500, f3: 2300, dur: 0.42 },
+  W: { voiced: true, kind: 'sonorant', f1: 350, f2: 900, f3: 2200, dur: 0.34 },
+  Y: { voiced: true, kind: 'sonorant', f1: 380, f2: 2000, f3: 2700, dur: 0.34 },
+  NG: { voiced: true, kind: 'sonorant', f1: 260, f2: 1200, f3: 2100, dur: 0.40 },
+
+  B: { voiced: false, kind: 'stop', burst: 2200, dur: 0.16 },
+  P: { voiced: false, kind: 'stop', burst: 2600, dur: 0.16 },
+  D: { voiced: false, kind: 'stop', burst: 2000, dur: 0.15 },
+  T: { voiced: false, kind: 'stop', burst: 2800, dur: 0.16 },
+  G: { voiced: false, kind: 'stop', burst: 1800, dur: 0.15 },
+  K: { voiced: false, kind: 'stop', burst: 3200, dur: 0.16 },
+  CH: { voiced: false, kind: 'affricate', burst: 3200, dur: 0.20 },
+  JH: { voiced: true, kind: 'affricate', burst: 2400, dur: 0.20 },
+  F: { voiced: false, kind: 'fricative', burst: 4300, dur: 0.16 },
+  V: { voiced: true, kind: 'fricative', burst: 3800, dur: 0.16 },
+  TH: { voiced: false, kind: 'fricative', burst: 3600, dur: 0.16 },
+  DH: { voiced: true, kind: 'fricative', burst: 2500, dur: 0.16 },
+  S: { voiced: false, kind: 'fricative', burst: 5200, dur: 0.15 },
+  Z: { voiced: true, kind: 'fricative', burst: 4200, dur: 0.15 },
+  SH: { voiced: false, kind: 'fricative', burst: 3800, dur: 0.17 },
+  HH: { voiced: false, kind: 'breath', burst: 2200, dur: 0.14 },
+  Q: { voiced: false, kind: 'stop', burst: 3000, dur: 0.16 },
+};
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function estimateSilentMoveFrames(move, moveFrames, settleFrames, speed){
+  const baseMoveFrames = move?.captured ? Math.max(moveFrames, 24) : moveFrames;
+  const preMoveHoldFrames = getMarkTone(move?.mark).tone === 'mark-turquoise'
+    ? Math.max(8, Math.round(12 / Math.max(speed, 0.5)))
+    : 0;
+  const settlePerMoveFrames = Math.max(2, Math.round(settleFrames / 4));
+  return preMoveHoldFrames + baseMoveFrames + settlePerMoveFrames;
+}
+
+function getExportHistoryWithinBudget(history, costOfMove, fixedCost = { frames: 0, seconds: 0 }, budgets = { frames: MAX_EXPORT_FRAMES, seconds: MAX_EXPORT_SECONDS }){
+  const usableHistory = [];
+  const startFrames = Number.isFinite(fixedCost?.frames) ? fixedCost.frames : 0;
+  const startSeconds = Number.isFinite(fixedCost?.seconds) ? fixedCost.seconds : 0;
+  let usedFrames = Math.max(0, startFrames);
+  let usedSeconds = Math.max(0, startSeconds);
+
+  for(const move of history){
+    const rawCost = costOfMove(move);
+    const moveFrames = Math.max(1, Math.ceil(Number(rawCost?.frames ?? rawCost ?? 0)));
+    const moveSeconds = Number.isFinite(rawCost?.seconds) ? Math.max(0, rawCost.seconds) : null;
+
+    if(usedFrames + moveFrames > budgets.frames){
+      break;
+    }
+    if(moveSeconds != null && usedSeconds + moveSeconds > budgets.seconds){
+      break;
+    }
+
+    usableHistory.push(move);
+    usedFrames += moveFrames;
+    if(moveSeconds != null){
+      usedSeconds += moveSeconds;
+    }
+  }
+
+  return {
+    history: usableHistory,
+    truncated: usableHistory.length < history.length,
+    estimatedFrames: usedFrames,
+    estimatedSeconds: usedSeconds,
+  };
+}
+
+const MESPEAK_BASE_URL = 'https://cdn.jsdelivr.net/npm/mespeak@2.0.2';
+const MESPEAK_CONFIG_URL = `${MESPEAK_BASE_URL}/src/mespeak_config.json`;
+const MESPEAK_VOICE_URL = `${MESPEAK_BASE_URL}/voices/en/en-us.json`;
+const VOICE_STYLE = {
+  amplitude: 96,
+  pitch: 42,
+  speed: 180,
+  wordgap: 0,
+  pauseBetweenMoves: 0.03,
+  targetPeak: 0.94,
+  fadeMs: 18,
+};
+let mespeakPromise = null;
+
+function createVoiceContext() {
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) {
+    throw new Error('このブラウザはWeb Audioに対応していません。');
+  }
+  return AudioCtx;
+}
+
+function toArrayBuffer(value) {
+  if (value instanceof ArrayBuffer) return value;
+  if (ArrayBuffer.isView(value)) {
+    return value.buffer.slice(value.byteOffset, value.byteOffset + value.byteLength);
+  }
+  throw new Error('meSpeakの音声データがArrayBufferではありません。');
+}
+
+async function decodeAudioDataCompat(audioCtx, arrayBuffer) {
+  const copy = arrayBuffer.slice(0);
+  if (audioCtx.decodeAudioData.length <= 1) {
+    return await audioCtx.decodeAudioData(copy);
+  }
+  return await new Promise((resolve, reject) => {
+    audioCtx.decodeAudioData(copy, resolve, reject);
+  });
+}
+
+async function loadMeSpeakEngine() {
+  if (!mespeakPromise) {
+    mespeakPromise = (async () => {
+      let mod = null;
+      const importCandidates = [
+        `${MESPEAK_BASE_URL}/+esm`,
+        'https://esm.sh/mespeak@2.0.2',
+      ];
+
+      let lastError = null;
+      for (const spec of importCandidates) {
+        try {
+          mod = await import(spec);
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      if (!mod) {
+        throw lastError || new Error('meSpeakライブラリを読み込めませんでした。');
+      }
+
+      const meSpeak = mod.default ?? mod.meSpeak ?? mod;
+      if (!meSpeak || typeof meSpeak.speak !== 'function' || typeof meSpeak.loadVoice !== 'function' || typeof meSpeak.loadConfig !== 'function') {
+        throw new Error('meSpeakのAPIが見つかりませんでした。');
+      }
+
+      // file:// 直開きだと相対パスの XHR が CORS で落ちるため、
+      // config / voice 定義は CDN 上の JSON を先に取得してから渡す。
+      const configResponse = await fetch(MESPEAK_CONFIG_URL, { cache: 'force-cache' });
+      if (!configResponse.ok) {
+        throw new Error(`meSpeakのconfigを取得できませんでした（${configResponse.status}）。`);
+      }
+      const configData = await configResponse.json();
+      meSpeak.loadConfig(configData);
+      if (typeof meSpeak.isConfigLoaded === 'function' && !meSpeak.isConfigLoaded()) {
+        throw new Error('meSpeakのconfig-dataを読み込めませんでした。');
+      }
+
+      const voiceResponse = await fetch(MESPEAK_VOICE_URL, { cache: 'force-cache' });
+      if (!voiceResponse.ok) {
+        throw new Error(`meSpeakの英語音声を取得できませんでした（${voiceResponse.status}）。`);
+      }
+
+      const voiceData = await voiceResponse.json();
+      const loaded = meSpeak.loadVoice(voiceData);
+      if (loaded === false) {
+        throw new Error('meSpeakの英語音声を読み込めませんでした。');
+      }
+
+      if (typeof meSpeak.setVolume === 'function') {
+        meSpeak.setVolume(1);
+      }
+
+      return meSpeak;
+    })();
+  }
+  return mespeakPromise;
+}
+
+function speakRawWav(meSpeak, text, options = {}) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (err, value) => {
+      if (settled) return;
+      settled = true;
+      if (err) reject(err);
+      else resolve(value);
+    };
+
+    const speakOptions = {
+      rawdata: true,
+      ...options,
+    };
+
+    try {
+      const ret = meSpeak.speak(
+        text,
+        speakOptions,
+        (success, id, stream) => {
+          if (!success) {
+            finish(new Error('meSpeakの音声生成に失敗しました。'));
+            return;
+          }
+          try {
+            finish(null, toArrayBuffer(stream));
+          } catch (err) {
+            finish(err);
+          }
+        }
+      );
+
+      if (ret instanceof ArrayBuffer || ArrayBuffer.isView(ret)) {
+        finish(null, toArrayBuffer(ret));
+        return;
+      }
+
+      if (typeof ret === 'number' && ret === 0) {
+        finish(new Error('meSpeakの音声生成を開始できませんでした。'));
+      }
+    } catch (err) {
+      finish(err);
+    }
+  });
+}
+
+
+function safeAudioRate(audioCtx, sampleRate) {
+  const fallback = Number.isFinite(audioCtx?.sampleRate) && audioCtx.sampleRate > 0 ? audioCtx.sampleRate : 48000;
+  const rate = Number.isFinite(sampleRate) && sampleRate > 0 ? sampleRate : fallback;
+  return Math.max(8000, Math.min(96000, Math.round(rate)));
+}
+
+function safeBufferLength(audioCtx, length) {
+  const fallbackMax = Math.floor(safeAudioRate(audioCtx) * 4); // 4秒までの安全域
+  const n = Number(length);
+  if (!Number.isFinite(n) || n <= 0) return 1;
+  return Math.max(1, Math.min(fallbackMax, Math.floor(n)));
+}
+
+function safeCreateBuffer(audioCtx, channels, length, sampleRate) {
+  const safeChannels = Math.max(1, Math.min(2, Math.floor(Number(channels) || 1)));
+  const safeRate = safeAudioRate(audioCtx, sampleRate);
+  const safeLength = safeBufferLength(audioCtx, length);
+  try {
+    return audioCtx.createBuffer(safeChannels, safeLength, safeRate);
+  } catch (_) {
+    const fallbackLength = Math.max(1, Math.min(1024, safeLength));
+    return audioCtx.createBuffer(1, fallbackLength, safeRate);
+  }
+}
+
+function concatAudioBuffers(audioCtx, buffers, gapSeconds = 0.12) {
+  const usable = (Array.isArray(buffers) ? buffers : []).filter(Boolean).filter((buf) =>
+    buf && Number.isFinite(buf.length) && buf.length > 0
+  );
+  if (!usable.length) {
+    return safeCreateBuffer(audioCtx, 1, safeAudioRate(audioCtx) * 0.2, audioCtx?.sampleRate || 48000);
+  }
+
+  const sampleRate = safeAudioRate(audioCtx, usable[0].sampleRate || audioCtx?.sampleRate || 48000);
+  const channels = Math.max(1, Math.min(2, ...usable.map(buf => Math.max(1, Math.floor(buf.numberOfChannels || 1)))));
+  const gapLength = Math.max(0, Math.min(Math.floor(sampleRate * 0.5), Math.round(Number(gapSeconds) * sampleRate || 0)));
+
+  let totalLength = 0;
+  for (let i = 0; i < usable.length; i++) {
+    const buf = usable[i];
+    const len = Number.isFinite(buf.length) && buf.length > 0 ? Math.floor(buf.length) : 0;
+    if (len <= 0) continue;
+    totalLength += len;
+    if (i < usable.length - 1) totalLength += gapLength;
+  }
+
+  const maxLength = Math.floor(sampleRate * 600); // 10分を上限にして、通常の棋譜では切り捨てない
+  const outputLength = Math.max(1, Math.min(totalLength, maxLength));
+  let output;
+  try {
+    output = audioCtx.createBuffer(channels, outputLength, sampleRate);
+  } catch (_) {
+    output = safeCreateBuffer(audioCtx, channels, outputLength, sampleRate);
+  }
+
+  let offset = 0;
+  for (const buf of usable) {
+    const len = Number.isFinite(buf.length) ? Math.floor(buf.length) : 0;
+    if (len <= 0) continue;
+    for (let ch = 0; ch < channels; ch++) {
+      try {
+        const out = output.getChannelData(ch);
+        const src = buf.getChannelData(Math.min(ch, Math.max(0, (buf.numberOfChannels || 1) - 1)));
+        const copyLen = Math.min(src.length, out.length - offset);
+        if (copyLen > 0) {
+          out.set(src.subarray(0, copyLen), offset);
+        }
+      } catch (_) {
+        // 1チャンネルだけでも残せればよい
+      }
+    }
+    offset += len + gapLength;
+    if (offset >= output.length) break;
+  }
+
+  return output;
+}
+
+function makeSilenceBuffer(audioCtx, seconds, sampleRate = audioCtx.sampleRate || 48000) {
+  const length = safeBufferLength(audioCtx, Number(seconds) * safeAudioRate(audioCtx, sampleRate));
+  return safeCreateBuffer(audioCtx, 1, length, sampleRate);
+}
+
+function fitAudioBufferToDuration(audioCtx, sourceBuffer, seconds) {
+  const sampleRate = safeAudioRate(audioCtx, sourceBuffer?.sampleRate || audioCtx?.sampleRate || 48000);
+  const channels = Math.max(1, Math.min(2, Math.floor(sourceBuffer?.numberOfChannels || 1)));
+  const targetLength = safeBufferLength(audioCtx, Math.max(0.02, Number(seconds) || 0) * sampleRate);
+  const output = safeCreateBuffer(audioCtx, channels, targetLength, sampleRate);
+
+  for (let ch = 0; ch < channels; ch++) {
+    let src;
+    try {
+      src = sourceBuffer.getChannelData(Math.min(ch, Math.max(0, (sourceBuffer.numberOfChannels || 1) - 1)));
+    } catch (_) {
+      continue;
+    }
+    const dst = output.getChannelData(ch);
+    const srcLen = src.length;
+
+    if (!Number.isFinite(srcLen) || srcLen <= 0) continue;
+    if (srcLen === 1) {
+      dst.fill(src[0]);
+      continue;
+    }
+
+    const maxI = Math.min(dst.length, targetLength);
+    for (let i = 0; i < maxI; i++) {
+      const pos = (i / Math.max(1, maxI - 1)) * (srcLen - 1);
+      const left = Math.floor(pos);
+      const right = Math.min(srcLen - 1, left + 1);
+      const frac = pos - left;
+      dst[i] = src[left] + (src[right] - src[left]) * frac;
+    }
+  }
+
+  return output;
+}
+
+function enhanceVoiceBuffer(audioCtx, sourceBuffer, options = {}) {
+  const sampleRate = safeAudioRate(audioCtx, sourceBuffer?.sampleRate || audioCtx?.sampleRate || 48000);
+  const channels = Math.max(1, Math.min(2, Math.floor(sourceBuffer?.numberOfChannels || 1)));
+  const output = safeCreateBuffer(audioCtx, channels, sourceBuffer?.length || 1, sampleRate);
+  const targetPeak = Number.isFinite(options.targetPeak) ? options.targetPeak : VOICE_STYLE.targetPeak;
+  const fadeMs = Number.isFinite(options.fadeMs) ? options.fadeMs : VOICE_STYLE.fadeMs;
+  const fadeSamples = Math.max(1, Math.round((fadeMs / 1000) * sampleRate));
+
+  let peak = 0;
+  for (let ch = 0; ch < channels; ch++) {
+    let src;
+    try {
+      src = sourceBuffer.getChannelData(Math.min(ch, Math.max(0, (sourceBuffer.numberOfChannels || 1) - 1)));
+    } catch (_) {
+      continue;
+    }
+    for (let i = 0; i < src.length; i++) {
+      const v = Math.abs(src[i]);
+      if (v > peak) peak = v;
+    }
+  }
+
+  const gain = peak > 0 ? Math.min(1.5, targetPeak / peak) : 1;
+
+  for (let ch = 0; ch < channels; ch++) {
+    let src;
+    try {
+      src = sourceBuffer.getChannelData(Math.min(ch, Math.max(0, (sourceBuffer.numberOfChannels || 1) - 1)));
+    } catch (_) {
+      continue;
+    }
+    const dst = output.getChannelData(ch);
+    const len = Math.min(src.length, dst.length);
+    for (let i = 0; i < len; i++) {
+      const fadeIn = Math.min(1, i / fadeSamples);
+      const fadeOut = Math.min(1, (len - 1 - i) / fadeSamples);
+      const fade = Math.min(fadeIn, fadeOut);
+      let sample = src[i] * gain;
+      sample = Math.tanh(sample * 1.12) / Math.tanh(1.12);
+      dst[i] = sample * fade;
+    }
+  }
+
+  return output;
+}
+
+
+function createFallbackToneBuffer(audioCtx, seconds, seed = 0, sampleRate = audioCtx.sampleRate || 48000) {
+  const safeSeconds = Number.isFinite(seconds) ? Math.max(0.12, seconds) : 0.3;
+  const length = Math.max(1, Math.round(safeSeconds * sampleRate));
+  const buffer = audioCtx.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+
+  const baseFreq = 170 + ((seed % 11) * 16);
+  const sweepFreq = 0.6 + ((seed % 5) * 0.13);
+  const fadeSamples = Math.max(1, Math.round(sampleRate * 0.03));
+
+  for (let i = 0; i < length; i++) {
+    const t = i / sampleRate;
+    const envIn = Math.min(1, i / fadeSamples);
+    const envOut = Math.min(1, (length - 1 - i) / fadeSamples);
+    const env = Math.min(envIn, envOut);
+    const tone = Math.sin((2 * Math.PI * baseFreq * t) + (0.35 * Math.sin(2 * Math.PI * sweepFreq * t)));
+    data[i] = 0.18 * tone * env;
+  }
+  return buffer;
+}
+
+function buildSpeechVariants(move, index) {
+  const square = move?.to ? rcToAlg(move.to[0], move.to[1]).toLowerCase() : '';
+  const fileWord = square ? (FILE_WORDS[square[0]?.toUpperCase()] || '') : '';
+  const rankWord = square ? (RANK_WORDS[square[1]] || '') : '';
+  const label = moveSourceOrientationLabel(move);
+  const patternWord = PATTERN_WORDS[label.pattern] || (label.pattern === 'β' ? 'beta' : 'alpha');
+  const idWord = LETTER_WORDS[label.id] || '';
+
+  const variants = [
+    moveSpeechText(move),
+    [patternWord, idWord, fileWord, rankWord].filter(Boolean).join(' '),
+    [patternWord, fileWord, rankWord].filter(Boolean).join(' '),
+    [fileWord, rankWord].filter(Boolean).join(' '),
+    [square].filter(Boolean).join(' '),
+    [String(Number.isFinite(move?.turn) ? move.turn : index + 1)].filter(Boolean).join(' '),
+  ];
+
+  return [...new Set(variants.map(v => String(v || '').replace(/\s+/g, ' ').trim()).filter(Boolean))];
+}
+
+async function renderVoiceAudioBuffer(history, onProgress = null) {
+  const meSpeak = await loadMeSpeakEngine();
+  const AudioCtx = createVoiceContext();
+  const decodeCtx = new AudioCtx();
+  const pieces = [];
+  const maxHistory = Array.isArray(history) ? history : [];
+  let renderedMoves = 0;
+  let hadFallback = false;
+
+  try {
+    for (let i = 0; i < maxHistory.length; i++) {
+      const move = maxHistory[i];
+      const speechText = moveSpeechText(move);
+      const totalSeconds = estimateVoiceDuration(speechText, move);
+      const leadInSeconds = Math.min(0.16, Math.max(0.04, totalSeconds * 0.10));
+      const trailingGapSeconds = i < maxHistory.length - 1
+        ? Math.min(0.06, Math.max(0.02, VOICE_STYLE.pauseBetweenMoves))
+        : 0;
+      const speechSeconds = Math.max(0.24, totalSeconds - leadInSeconds - trailingGapSeconds);
+
+      const pushSilence = (seconds) => {
+        if (Number.isFinite(seconds) && seconds > 0) {
+          pieces.push(makeSilenceBuffer(decodeCtx, seconds, decodeCtx.sampleRate || 48000));
+        }
+      };
+
+      let buffered = false;
+      let lastError = null;
+
+      pushSilence(leadInSeconds);
+
+      for (const candidateText of buildSpeechVariants(move, i)) {
+        try {
+          const rawWav = await speakRawWav(meSpeak, candidateText, {
+            amplitude: VOICE_STYLE.amplitude,
+            pitch: VOICE_STYLE.pitch,
+            speed: VOICE_STYLE.speed,
+            wordgap: VOICE_STYLE.wordgap,
+          });
+          const decoded = await decodeAudioDataCompat(decodeCtx, rawWav);
+          const enhanced = enhanceVoiceBuffer(decodeCtx, decoded);
+          pieces.push(fitAudioBufferToDuration(decodeCtx, enhanced, speechSeconds));
+          buffered = true;
+          break;
+        } catch (err) {
+          lastError = err;
+        }
+      }
+
+      if (!buffered) {
+        hadFallback = true;
+        console.warn('音声生成が失敗したため、この手は代替音に置き換えます。', lastError);
+        pieces.push(createFallbackToneBuffer(decodeCtx, speechSeconds, i));
+      }
+
+      pushSilence(trailingGapSeconds);
+      renderedMoves = i + 1;
+
+      if (typeof onProgress === 'function') {
+        try {
+          onProgress(i + 1, maxHistory.length, speechText);
+        } catch (_) {}
+      }
+    }
+
+    try {
+      return {
+        buffer: concatAudioBuffers(decodeCtx, pieces, 0),
+        renderedMoves,
+        stoppedOnError: hadFallback,
+      };
+    } catch (err) {
+      console.warn('音声バッファの結合に失敗したため、代替音で続行します。', err);
+      return {
+        buffer: createFallbackToneBuffer(decodeCtx, 0.5, renderedMoves),
+        renderedMoves,
+        stoppedOnError: true,
+      };
+    }
+  } finally {
+    if (typeof decodeCtx.close === 'function') {
+      try { await decodeCtx.close(); } catch (_) {}
+    }
+  }
+}
+
+const INITIAL_SETUP = [
+  [5, 3, 3, 2, 6, 3, 3, 5],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [null, null, null, null, null, null, null, null],
+  [null, null, null, null, null, null, null, null],
+  [null, null, null, null, null, null, null, null],
+  [null, null, null, null, null, null, null, null],
+  [1, 1, 1, 1, 1, 1, 1, 1],
+  [5, 3, 3, 6, 2, 3, 3, 5],
+];
+
+const SAMPLE_HISTORY = [
+  {
+    turn:1, player:"white", from:[6,4], to:[4,4],
+    pieceBefore:{top:1, player:"white", isKing:false},
+    pieceAfter:{top:1, player:"white", isKing:false},
+    captured:null,
+    mark:""
+  },
+  {
+    turn:2, player:"black", from:[1,3], to:[3,3],
+    pieceBefore:{top:1, player:"black", isKing:false},
+    pieceAfter:{top:1, player:"black", isKing:false},
+    captured:null,
+    mark:""
+  },
+  {
+    turn:3, player:"white", from:[7,4], to:[5,4],
+    pieceBefore:{top:2, player:"white", isKing:true},
+    pieceAfter:{top:5, player:"white", isKing:true},
+    captured:null,
+    mark:"!!"
+  },
+  {
+    turn:4, player:"black", from:[0,4], to:[2,4],
+    pieceBefore:{top:6, player:"black", isKing:false},
+    pieceAfter:{top:2, player:"black", isKing:false},
+    captured:null,
+    mark:""
+  },
+  {
+    turn:5, player:"white", from:[5,4], to:[3,4],
+    pieceBefore:{top:5, player:"white", isKing:true},
+    pieceAfter:{top:1, player:"white", isKing:true},
+    captured:{top:2, player:"black", isKing:false},
+    mark:"!!"
+  }
+];
+const SAMPLE_PACKAGE = { initialSetup: INITIAL_SETUP, moves: SAMPLE_HISTORY };
+const SAMPLE_TEXT = JSON.stringify(SAMPLE_PACKAGE, null, 2);
+
+function cloneSetup(setup){
+  return (setup || []).map(row => row.map(cell => {
+    if (cell == null) return null;
+    if (typeof cell === 'object') {
+      return {
+        top: Number(cell.top),
+        front: cell.front ?? cell.F ?? null,
+        right: cell.right ?? cell.R ?? null,
+        player: cell.player ?? null,
+        isKing: !!cell.isKing,
+        reverseFB: !!cell.reverseFB
+      };
+    }
+    return Number(cell);
+  }));
+}
+
+function setupToText(setup){
+  return (setup || []).map(row => row.map(cell => {
+    if (cell == null) return '.';
+    if (typeof cell === 'object') return JSON.stringify(cell);
+    return String(cell);
+  }).join(' ')).join('\n');
+}
+
+function parseBoardText(text){
+  const raw = String(text || '').trim();
+  if(!raw) return null;
+  let data;
+  try{
+    data = JSON.parse(raw);
+  }catch(_){
+    data = null;
+  }
+  if(Array.isArray(data)){
+    if(data.length !== SIZE || data.some(row => !Array.isArray(row) || row.length !== SIZE)){
+      throw new Error('初期盤面JSONは8×8配列にしてください');
+    }
+    return data.map(row => row.map(v => {
+      if(v == null || v === '' || v === 0 || v === '0') return null;
+      if(typeof v === 'object'){
+        return {
+          top: Number(v.top),
+          front: v.front ?? v.F ?? null,
+          right: v.right ?? v.R ?? null,
+          player: v.player ?? null,
+          isKing: !!v.isKing,
+          reverseFB: !!v.reverseFB
+        };
+      }
+      return Number(v);
+    }));
+  }
+  if(data && typeof data === 'object'){
+    const embedded = data.initialSetup ?? data.board ?? data.startBoard ?? null;
+    if(embedded != null){
+      return parseBoardText(JSON.stringify(embedded));
+    }
+  }
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  if(lines.length !== SIZE){
+    throw new Error(`初期盤面は8行必要です（今は${lines.length}行）`);
+  }
+  return lines.map((line, r) => {
+    const tokens = line.split(/[\s,]+/).filter(Boolean);
+    if(tokens.length !== SIZE){
+      throw new Error(`初期盤面の${r+1}行目は8個必要です（今は${tokens.length}個）`);
+    }
+    return tokens.map(t => {
+      const v = t.trim();
+      if(v === '.' || v === '-' || v.toLowerCase() === 'x' || v.toLowerCase() === 'null' || v === '0') return null;
+      const n = Number(v);
+      if(!Number.isFinite(n)) throw new Error(`初期盤面に数値でない値があります: ${v}`);
+      return n;
+    });
+  });
+}
+
+function normalizeInitialSetup(data){
+  if(!data) return null;
+  if(Array.isArray(data)){
+    return parseBoardText(JSON.stringify(data));
+  }
+  if(typeof data === 'string'){
+    return parseBoardText(data);
+  }
+  if(typeof data === 'object'){
+    return parseBoardText(JSON.stringify(data.initialSetup ?? data.board ?? data.startBoard ?? data));
+  }
+  return null;
+}
+
+const state = {
+  history: [],
+  boards: [],
+  current: 0,
+  timer: null,
+  playing: false,
+  speed: 1.3,
+  effect: 'cinema',
+  loop: false,
+  autoPlay: false,
+  selectedMove: null,
+  fxTimer: null,
+  videoUrl: '',
+  videoFilename: '',
+  initialSetup: cloneSetup(INITIAL_SETUP)
+};
+
+const EXPORT_FPS = 30;
+const EXPORT_SIZE = 1280;
+const EXPORT_MARGIN = 72;
+const MAX_EXPORT_SECONDS = 120;
+const MAX_EXPORT_FRAMES = Math.floor(MAX_EXPORT_SECONDS * EXPORT_FPS);
+
+
+function cloneBoard(board){
+  return board.map(row => row.map(cell => cell ? {
+    ...cell,
+    orientation: cloneOrientationState(cell.orientation)
+  } : null));
+}
+
+function createPiece(top, player, isKing=false, reverseFB=false, orientation=null){
+  return {
+    top: Number(top),
+    player,
+    isKing: !!isKing,
+    reverseFB: !!reverseFB,
+    orientation: cloneOrientationState(orientation)
+  };
+}
+
+function initialBoard(setup = state.initialSetup){
+  const board = [];
+  for(let r=0;r<SIZE;r++){
+    board[r] = [];
+    for(let c=0;c<SIZE;c++){
+      const v = setup?.[r]?.[c];
+      if(v == null){
+        board[r][c] = null;
+        continue;
+      }
+      if(typeof v === 'object'){
+        const player = v.player ?? (r < 2 ? 'black' : r > 5 ? 'white' : null);
+        const orientation = buildInitialOrientationState(v, player);
+        board[r][c] = player ? createPiece(v.top, player, !!v.isKing, !!v.reverseFB, orientation) : null;
+        continue;
+      }
+      const player = r < 2 ? 'black' : r > 5 ? 'white' : null;
+      const orientation = buildInitialOrientationState({ top: v }, player);
+      board[r][c] = player ? createPiece(v, player, v === 2, false, orientation) : null;
+    }
+  }
+  return board;
+}
+
+function applyMove(board, move){
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  const sourcePiece = board?.[fr]?.[fc] || move.pieceBefore || null;
+  const pieceAfter = move.pieceAfter || move.pieceBefore || sourcePiece || { top: 1, player: move.player || 'white', isKing: false };
+
+  const beforeOrientation =
+    getOrientationState(sourcePiece)
+    || getOrientationState(move.orientationBefore)
+    || pickInitialOrientationState(sourcePiece?.top ?? move.pieceBefore?.top ?? pieceAfter.top, sourcePiece?.player ?? pieceAfter.player ?? move.player);
+
+  const afterOrientation =
+    getOrientationState(move.orientationAfter)
+    || getOrientationState(pieceAfter)
+    || advanceOrientationByMove(beforeOrientation, move);
+
+  move.orientationBefore = cloneOrientationState(beforeOrientation);
+  move.orientationAfter = cloneOrientationState(afterOrientation);
+
+  board[tr][tc] = createPiece(pieceAfter.top, pieceAfter.player, pieceAfter.isKing, !!pieceAfter.reverseFB, afterOrientation);
+  board[fr][fc] = null;
+  if(move.captured){
+    // captured piece disappears from destination if the source game logic did not already overwrite it.
+  }
+  return board;
+}
+
+function buildBoards(history, setup){
+  const boards = [cloneBoard(initialBoard(setup))];
+  for(const move of history){
+    const prev = cloneBoard(boards[boards.length - 1]);
+    applyMove(prev, move);
+    boards.push(prev);
+  }
+  return boards;
+}
+
+function rcLabel(r,c){
+  return String.fromCharCode(65 + c) + (8 - r);
+}
+
+function rcToAlg(r, c){
+  return rcLabel(r, c).toLowerCase();
+}
+
+function algToRc(square){
+  const m = String(square).trim().match(/^([a-hA-H])([1-8])$/);
+  if(!m) throw new Error(`座標が不正です: ${square}`);
+  const c = m[1].toLowerCase().charCodeAt(0) - 97;
+  const r = 8 - Number(m[2]);
+  return [r, c];
+}
+
+function normalizeMarkText(mark){
+  return String(mark ?? '')
+    .normalize('NFKC')
+    .replace(/\uFE0F/g, '')
+    .trim();
+}
+
+function getMarkTone(mark){
+  const normalized = normalizeMarkText(mark);
+  if(!normalized) return { text:'', tone:'mark-neutral' };
+  if(normalized === '!!') return { text:normalized, tone:'mark-turquoise' };
+  if(normalized === '??') return { text:normalized, tone:'mark-red' };
+  if(normalized === '?!') return { text:normalized, tone:'mark-yellow' };
+  if(normalized === '!') return { text:normalized, tone:'mark-blue' };
+  if(normalized === '✪' || normalized === '👍' || normalized === '✓') return { text:normalized, tone:'mark-green' };
+  if(normalized === '?') return { text:normalized, tone:'mark-orange' };
+  if(normalized === '☓' || normalized === '✗' || normalized === '×') return { text:normalized, tone:'mark-softred' };
+  if(normalized === '📖') return { text:normalized, tone:'mark-brown' };
+  return { text:normalized, tone:'mark-neutral' };
+}
+
+function isBrilliantMove(move){
+  return getMarkTone(move?.mark).tone === 'mark-turquoise';
+}
+
+function formatMoveNotation(move){
+  const side = move.player === 'black' ? 'B' : 'W';
+  const from = rcToAlg(move.from[0], move.from[1]);
+  const to = rcToAlg(move.to[0], move.to[1]);
+  const beforeTop = Number(move.pieceBefore?.top ?? move.fromTop ?? move.pieceAfter?.top ?? 1);
+  const afterTop = Number(move.pieceAfter?.top ?? move.toTop ?? beforeTop);
+  const mark = normalizeMarkText(move.mark ?? move.badge ?? '');
+  return `${side}:${from},${beforeTop}→${to},${afterTop}${mark ? `,${mark}` : ''}`;
+}
+
+function pipCells(top){
+  const layouts = {
+    1: [[1,1]],
+    2: [[0,0],[2,2]],
+    3: [[0,0],[1,1],[2,2]],
+    4: [[0,0],[0,2],[2,0],[2,2]],
+    5: [[0,0],[0,2],[1,1],[2,0],[2,2]],
+    6: [[0,0],[1,0],[2,0],[0,2],[1,2],[2,2]]
+  };
+  return (layouts[Number(top)] || layouts[1]).map(([r,c]) => `<span class="pip" style="grid-row:${r+1};grid-column:${c+1}"></span>`).join('');
+}
+
+function renderBoard(index){
+  const board = state.boards[index] || initialBoard();
+  boardEl.innerHTML = '';
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r+c)%2===0 ? 'white' : 'black');
+      sq.dataset.rc = rcLabel(r,c);
+      const piece = board[r][c];
+      if(piece){
+        const p = document.createElement('div');
+        p.className = `piece ${piece.player} ${piece.isKing ? 'king' : ''}`;
+        if(state.selectedMove && state.selectedMove.to[0] === r && state.selectedMove.to[1] === c){
+          p.classList.add('capture');
+          const markInfo = getMarkTone(state.selectedMove.mark);
+          if(markInfo.text){
+            p.classList.add('badged', markInfo.tone);
+            p.dataset.mark = markInfo.text;
+          }
+        }
+        p.innerHTML = `<div class="pip-grid">${pipCells(piece.top)}</div>`;
+        sq.appendChild(p);
+      }
+      boardEl.appendChild(sq);
+    }
+  }
+}
+
+function moveLabel(move){
+  return moveVoiceNotation(move) || move.notation || '';
+}
+
+function applyCinematicChrome(){
+  document.body.classList.toggle('cinema-active', state.effect !== 'clean');
+}
+
+
+function triggerSceneFX(move, index){
+  if(!move || index <= 0) return;
+
+  const mode = move.captured ? 'capture' : (move.pieceAfter?.isKing ? 'king' : 'normal');
+  const [fr, fc] = move.from;
+  const [tr, tc] = move.to;
+  const dx = tc - fc;
+  const dy = tr - fr;
+
+  const rect = boardWrap.getBoundingClientRect();
+  const targetX = (tc + 0.5) / SIZE;
+  const targetY = (tr + 0.5) / SIZE;
+  const focusX = `${targetX * 100}%`;
+  const focusY = `${targetY * 100}%`;
+
+  // 盤面の端でもターゲットが中央に寄るよう、かなり強めにパンする
+  const centerShiftX = (0.5 - targetX) * rect.width * 0.5;
+  const centerShiftY = (0.5 - targetY) * rect.height * 0.5;
+  const moveBoostX = dx * 18;
+  const moveBoostY = dy * 18;
+  const captureBoost = mode === 'capture' ? 28 : 0;
+  const kingBoost = mode === 'king' ? 16 : 0;
+
+  boardWrap.style.setProperty('--cam-origin-x', focusX);
+  boardWrap.style.setProperty('--cam-origin-y', focusY);
+  boardWrap.style.setProperty('--cam-x', `${Math.max(-260, Math.min(260, centerShiftX + moveBoostX + captureBoost))}px`);
+  boardWrap.style.setProperty('--cam-y', `${Math.max(-220, Math.min(220, centerShiftY + moveBoostY + captureBoost + kingBoost))}px`);
+  boardWrap.style.setProperty('--cam-rot', `${Math.max(-10, Math.min(10, (dx * 0.65) + (dy * 0.45)))}deg`);
+
+  boardWrap.classList.remove('fx-zoom', 'fx-capture', 'fx-king');
+  void boardWrap.offsetWidth;
+  boardWrap.classList.add(mode === 'capture' ? 'fx-capture' : mode === 'king' ? 'fx-king' : 'fx-zoom');
+
+  if(!burstLayer) return;
+  burstLayer.innerHTML = '';
+
+  const flash = document.createElement('div');
+  flash.style.position = 'absolute';
+  flash.style.inset = '8%';
+  flash.style.borderRadius = '22px';
+  flash.style.border = mode === 'capture'
+    ? '2px solid rgba(255,232,107,.72)'
+    : '2px solid rgba(255,255,255,.28)';
+  flash.style.boxShadow = mode === 'capture'
+    ? '0 0 0 10px rgba(255,232,107,.08), inset 0 0 60px rgba(255,232,107,.12)'
+    : '0 0 0 10px rgba(255,255,255,.05), inset 0 0 48px rgba(255,255,255,.08)';
+  flash.style.animation = 'burstPop .58s ease-out forwards';
+  burstLayer.appendChild(flash);
+
+  const caption = document.createElement('div');
+  caption.className = 'move-caption';
+  caption.textContent = moveVoiceNotation(move);
+  const rightSide = tc <= 4;
+  const leftPct = rightSide ? ((tc + 1) / SIZE) * 100 + 1.2 : ((tc / SIZE) * 100) - 1.2;
+  const topPct = ((tr + 0.5) / SIZE) * 100;
+  caption.style.left = `${Math.max(2, Math.min(98, leftPct))}%`;
+  caption.style.top = `${Math.max(8, Math.min(92, topPct))}%`;
+  caption.style.transform = rightSide ? 'translate(0, -50%)' : 'translate(-100%, -50%)';
+  burstLayer.appendChild(caption);
+
+  const spark = document.createElement('div');
+  spark.className = 'burst-spark';
+  burstLayer.appendChild(spark);
+
+  window.clearTimeout(state.fxTimer);
+  state.fxTimer = window.setTimeout(() => {
+    burstLayer.innerHTML = '';
+  }, 660);
+}
+
+function updateUI(){
+  applyCinematicChrome();
+
+  const move = state.history[state.current - 1] || null;
+  statTurn.textContent = move ? move.turn : '0';
+  statIndex.textContent = `${state.current}/${state.boards.length - 1}`;
+  statCapture.textContent = String(state.history.filter(m => m.captured).length);
+  statScenes.textContent = String(state.history.length);
+  moveCountText.textContent = `${state.history.length} moves`;
+  moveDesc.textContent = move ? moveVoiceNotation(move) : '棋譜を読み込むと、ここにカット割り用のテキストが出ます。';
+
+  const cards = [...timelineEl.querySelectorAll('.move-card')];
+  cards.forEach((card, idx) => card.classList.toggle('active', idx + 1 === state.current));
+  renderBoard(state.current);
+}
+
+function renderTimeline(){
+  timelineEl.innerHTML = '';
+  state.history.forEach((move, idx) => {
+    const card = document.createElement('div');
+    card.className = 'move-card';
+    if(idx + 1 === state.current) card.classList.add('active');
+    const markInfo = getMarkTone(move.mark);
+    const fallbackTag = move.captured ? 'CAPTURE' : (move.pieceAfter?.isKing ? 'KING' : 'NORMAL');
+    const tagText = markInfo.text || fallbackTag;
+    const tagClass = markInfo.text ? markInfo.tone : 'mark-neutral';
+    card.innerHTML = `
+      <div class="n">MOVE ${String(move.turn).padStart(2,'0')}</div>
+      <div class="mv">${moveLabel(move)}</div>
+      <div class="tag ${tagClass}">${tagText}</div>
+    `;
+    card.addEventListener('click', () => {
+      pause();
+      state.current = idx + 1;
+      state.selectedMove = move;
+      updateUI();
+    });
+    timelineEl.appendChild(card);
+  });
+}
+
+function loadHistory(history, setup){
+  if(setup){
+    state.initialSetup = cloneSetup(setup);
+  }
+  state.history = history.map((m, idx) => {
+    const move = {
+      turn: m.turn ?? (idx + 1),
+      player: (m.player || 'white').toLowerCase(),
+      from: m.from,
+      to: m.to,
+      pieceBefore: m.pieceBefore || {top:m.fromTop ?? 1, player:m.player || 'white', isKing:Number(m.fromTop ?? 1) === 2},
+      pieceAfter: m.pieceAfter || m.pieceBefore || {top:m.toTop ?? m.fromTop ?? 1, player:m.player || 'white', isKing:Number(m.toTop ?? m.fromTop ?? 1) === 2},
+      orientationBefore: m.orientationBefore || m.beforeOrientation || null,
+      orientationAfter: m.orientationAfter || m.afterOrientation || null,
+      captured: m.captured || null,
+      mark: normalizeMarkText(m.mark ?? m.badge ?? ''),
+      notation: m.notation || ''
+    };
+    if(!move.notation) move.notation = formatMoveNotation({
+      ...move,
+      from: move.from,
+      to: move.to,
+      pieceBefore: move.pieceBefore,
+      pieceAfter: move.pieceAfter,
+    });
+    return move;
+  });
+  state.boards = buildBoards(state.history, state.initialSetup);
+
+  // 盤面の再構築後に、各手の「移動元 / 移動後」の姿勢を確定保存する
+  state.history = state.history.map((move, idx) => {
+    const beforePiece = state.boards[idx]?.[move.from?.[0]]?.[move.from?.[1]];
+    const afterPiece = state.boards[idx + 1]?.[move.to?.[0]]?.[move.to?.[1]];
+    if (!getOrientationState(move.orientationBefore) && beforePiece?.orientation) {
+      move.orientationBefore = cloneOrientationState(beforePiece.orientation);
+    }
+    if (!getOrientationState(move.orientationAfter) && afterPiece?.orientation) {
+      move.orientationAfter = cloneOrientationState(afterPiece.orientation);
+    }
+    return move;
+  });
+
+  state.current = 0;
+  state.selectedMove = null;
+  renderTimeline();
+  updateUI();
+  jsonStatus.textContent = 'loaded';
+}
+
+function parseNotationText(text){
+  const lines = text.split(/\r?\n/);
+  const history = [];
+  for(const rawLine of lines){
+    const line = rawLine.trim();
+    if(!line || line.startsWith('#') || line.startsWith('//')) continue;
+
+    const m = line.match(/^(W|B|白|黒|White|Black)\s*:\s*([a-hA-H][1-8])\s*,\s*(\d+)\s*(?:→|->)\s*([a-hA-H][1-8])\s*,\s*(\d+)\s*(?:,\s*(.+))?$/u);
+    if(!m){
+      throw new Error(`形式が違います: ${line}`);
+    }
+
+    const side = m[1].toLowerCase();
+    const player = (side === 'w' || side === 'white' || side === '白') ? 'white' : 'black';
+    const [fr, fc] = algToRc(m[2]);
+    const fromTop = Number(m[3]);
+    const [tr, tc] = algToRc(m[4]);
+    const toTop = Number(m[5]);
+    const mark = normalizeMarkText(m[6] || '');
+
+    history.push({
+      turn: history.length + 1,
+      player,
+      from: [fr, fc],
+      to: [tr, tc],
+      fromTop,
+      toTop,
+      pieceBefore: { top: fromTop, player, isKing: fromTop === 2 },
+      pieceAfter: { top: toTop, player, isKing: toTop === 2 },
+      captured: null,
+      mark,
+      notation: line
+    });
+  }
+  return history;
+}
+
+function parseGamePackage(moveText, boardText){
+  const trimmed = String(moveText || '').trim();
+  const boardTrimmed = String(boardText || '').trim();
+  let initialSetup = null;
+
+  if(boardTrimmed){
+    initialSetup = parseBoardText(boardTrimmed);
+  }
+
+  if(!trimmed){
+    return { history: [], initialSetup };
+  }
+
+  try{
+    const data = JSON.parse(trimmed);
+    if(Array.isArray(data)){
+      return { history: data.slice(0, 78), initialSetup };
+    }
+    if(data && typeof data === 'object'){
+      const history = (Array.isArray(data.moves) ? data.moves : Array.isArray(data.moveHistory) ? data.moveHistory : []).slice(0, 78);
+      const jsonSetup = normalizeInitialSetup(data.initialSetup ?? data.board ?? data.startBoard ?? null);
+      if(history.length || jsonSetup){
+        return { history, initialSetup: jsonSetup || initialSetup };
+      }
+    }
+    throw new Error('JSON配列か { initialSetup: [...], moves: [...] } が必要です');
+  }catch(err){
+    return { history: parseNotationText(trimmed).slice(0, 78), initialSetup };
+  }
+}
+
+function play(){
+  if(state.playing || !state.history.length) return;
+  state.playing = true;
+  playBtn.disabled = true;
+  tick();
+}
+
+function pause(){
+  state.playing = false;
+  playBtn.disabled = false;
+  if(state.timer){ clearTimeout(state.timer); state.timer = null; }
+}
+
+function tick(){
+  if(!state.playing) return;
+  if(state.current >= state.boards.length - 1){
+    if(state.loop){
+      state.current = 0;
+      state.selectedMove = null;
+      updateUI();
+    }else{
+      pause();
+      return;
+    }
+  }
+  const nextIndex = state.current + 1;
+  const move = state.history[nextIndex - 1];
+  state.current = nextIndex;
+  state.selectedMove = move;
+
+  if(state.effect === 'impact' && move?.captured){
+    boardShell.classList.add('shake');
+    setTimeout(() => boardShell.classList.remove('shake'), 380);
+  }
+
+  updateUI();
+  triggerSceneFX(move, state.current);
+
+  const baseDelay = state.effect === 'clean' ? 1100 : state.effect === 'impact' ? 780 : 920;
+  const delay = Math.max(220, baseDelay / state.speed);
+
+  state.timer = setTimeout(tick, delay);
+}
+
+function resetPlayback(){
+  pause();
+  state.current = 0;
+  state.selectedMove = null;
+  updateUI();
+}
+
+function step(dir){
+  pause();
+  const next = Math.min(Math.max(state.current + dir, 0), state.boards.length - 1);
+  state.current = next;
+  state.selectedMove = state.history[next - 1] || null;
+  updateUI();
+  triggerSceneFX(state.selectedMove, state.current);
+}
+
+
+
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function pickRecorderMimeType(){
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1.4D401E,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp8',
+    'video/webm;codecs=vp9,opus',
+    'video/webm'
+  ];
+  return candidates.find(type => window.MediaRecorder && MediaRecorder.isTypeSupported(type)) || '';
+}
+
+async function captureBoardSnapshot(targetCanvas, scale = 1.15){
+  if(typeof html2canvas !== 'function'){
+    throw new Error('html2canvasが読み込めませんでした。');
+  }
+  const snapshot = await html2canvas(boardShell, {
+    backgroundColor: null,
+    scale,
+    useCORS: true,
+    logging: false
+  });
+  if(targetCanvas.width !== snapshot.width) targetCanvas.width = snapshot.width;
+  if(targetCanvas.height !== snapshot.height) targetCanvas.height = snapshot.height;
+  const ctx = targetCanvas.getContext('2d');
+  ctx.clearRect(0, 0, targetCanvas.width, targetCanvas.height);
+  ctx.drawImage(snapshot, 0, 0);
+}
+
+function getPipPositions(top){
+  const layouts = {
+    1: [[1,1]],
+    2: [[0,0],[2,2]],
+    3: [[0,0],[1,1],[2,2]],
+    4: [[0,0],[0,2],[2,0],[2,2]],
+    5: [[0,0],[0,2],[1,1],[2,0],[2,2]],
+    6: [[0,0],[1,0],[2,0],[0,2],[1,2],[2,2]]
+  };
+  return layouts[Number(top)] || layouts[1];
+}
+
+function easeInOutCubic(t){
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function drawRoundedRect(ctx, x, y, w, h, r){
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
+}
+
+function drawPips(ctx, top, cx, cy, size, color, alpha = 1){
+  const positions = getPipPositions(top);
+  const radius = Math.max(7, size * 0.075);
+  const pipOffset = size * 0.26;
+  const gap = size * 0.12;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  positions.forEach(([r, c]) => {
+    const px = cx + (c - 1) * (pipOffset + gap);
+    const py = cy + (r - 1) * (pipOffset + gap);
+    ctx.beginPath();
+    ctx.arc(px, py, radius, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function drawPiece(ctx, piece, x, y, size, alpha = 1, rotation = 0){
+  if(!piece) return;
+  const pad = size * 0.05;
+  const w = size - pad * 2;
+  const h = size - pad * 2;
+  const r = Math.max(14, size * 0.13);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.translate(x, y);
+  if(rotation) ctx.rotate(rotation);
+  drawRoundedRect(ctx, -w / 2, -h / 2, w, h, r);
+
+  const isWhite = piece.player === 'white';
+  const isKing = !!piece.isKing;
+  const grad = ctx.createLinearGradient(-w/2, -h/2, w/2, h/2);
+
+  if(isKing && isWhite){
+    grad.addColorStop(0, '#ff8a8a');
+    grad.addColorStop(1, '#b91c1c');
+  }else if(isKing && !isWhite){
+    grad.addColorStop(0, '#60a5fa');
+    grad.addColorStop(1, '#1d4ed8');
+  }else if(isWhite){
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(1, '#dde6ff');
+  }else{
+    grad.addColorStop(0, '#1f2436');
+    grad.addColorStop(1, '#080b13');
+  }
+
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, size * 0.022);
+  ctx.strokeStyle = isKing
+    ? (isWhite ? 'rgba(255,120,120,.92)' : 'rgba(96,165,250,.92)')
+    : (isWhite ? 'rgba(255,255,255,.58)' : 'rgba(255,255,255,.16)');
+  ctx.stroke();
+
+  const innerGlow = ctx.createRadialGradient(-w*0.28, -h*0.28, 2, 0, 0, size*0.48);
+  if(isKing && isWhite){
+    innerGlow.addColorStop(0, 'rgba(255,255,255,.42)');
+    innerGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  }else if(isKing && !isWhite){
+    innerGlow.addColorStop(0, 'rgba(255,255,255,.18)');
+    innerGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  }else{
+    innerGlow.addColorStop(0, isWhite ? 'rgba(255,255,255,.84)' : 'rgba(255,255,255,.15)');
+    innerGlow.addColorStop(1, 'rgba(255,255,255,0)');
+  }
+  ctx.fillStyle = innerGlow;
+  ctx.fillRect(-w/2, -h/2, w, h);
+
+  drawPips(ctx, piece.top, 0, 0, size * 0.82, isKing ? (isWhite ? '#fff' : '#fff') : (isWhite ? '#0b1220' : '#f0f4ff'), 1);
+
+  if(isKing){
+    ctx.save();
+    ctx.lineWidth = Math.max(2, size * 0.034);
+    ctx.strokeStyle = isWhite ? 'rgba(255,80,80,.98)' : 'rgba(59,130,246,.98)';
+    ctx.shadowColor = isWhite ? 'rgba(255,80,80,.58)' : 'rgba(59,130,246,.58)';
+    ctx.shadowBlur = size * 0.17;
+    drawRoundedRect(ctx, -w / 2, -h / 2, w, h, r);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+
+function tonePalette(tone){
+  switch(tone){
+    case 'mark-turquoise': return { fill:'#2de2e6', stroke:'rgba(255,255,255,.9)', text:'#06121a' };
+    case 'mark-blue': return { fill:'#3b82f6', stroke:'rgba(255,255,255,.9)', text:'#eff6ff' };
+    case 'mark-green': return { fill:'#22c55e', stroke:'rgba(255,255,255,.9)', text:'#052e16' };
+    case 'mark-yellow': return { fill:'#fbbf24', stroke:'rgba(255,255,255,.92)', text:'#1f1302' };
+    case 'mark-orange': return { fill:'#f59e0b', stroke:'rgba(255,255,255,.9)', text:'#1f1302' };
+    case 'mark-red': return { fill:'#ef4444', stroke:'rgba(255,255,255,.9)', text:'#fff1f2' };
+    case 'mark-softred': return { fill:'#fca5a5', stroke:'rgba(255,255,255,.88)', text:'#3f1d1d' };
+    case 'mark-brown': return { fill:'#8b5a2b', stroke:'rgba(255,255,255,.84)', text:'#fff7ed' };
+    default: return { fill:'#94a3b8', stroke:'rgba(255,255,255,.84)', text:'#f8fafc' };
+  }
+}
+
+function drawMarkBadge(ctx, markInfo, x, y, size, alpha = 1){
+  if(!markInfo?.text) return;
+  const palette = tonePalette(markInfo.tone);
+  const badge = Math.max(26, size * 0.32);
+  const padX = Math.max(6, badge * 0.22);
+  const padY = Math.max(4, badge * 0.14);
+  const bw = Math.max(badge * 1.05, (markInfo.text.length * badge * 0.48) + padX * 2);
+  const bh = badge;
+  const rx = Math.max(6, bh * 0.28);
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.font = `800 ${Math.max(14, badge * 0.52)}px system-ui, sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = palette.fill;
+  ctx.strokeStyle = palette.stroke;
+  ctx.lineWidth = Math.max(1, size * 0.022);
+  ctx.shadowColor = palette.fill;
+  ctx.shadowBlur = Math.max(6, size * 0.12);
+
+  const bx = x + size * 0.26;
+  const by = y - size * 0.38;
+  drawRoundedRect(ctx, bx - bw / 2, by - bh / 2, bw, bh, rx);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.stroke();
+
+  ctx.fillStyle = palette.text;
+  ctx.fillText(markInfo.text, bx, by + 0.5);
+  ctx.restore();
+}
+
+function drawExportFrame(ctx, prevBoard, nextBoard, move, t, canvasWidth, canvasHeight, options = {}){
+  const boardSize = Math.min(canvasWidth, canvasHeight) * 0.94;
+  const cell = boardSize / 8;
+  const marginX = (canvasWidth - boardSize) / 2;
+  const marginY = (canvasHeight - boardSize) / 2;
+  const centerX = canvasWidth / 2;
+  const centerY = canvasHeight / 2;
+
+  ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+  const bg = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+  bg.addColorStop(0, '#02040a');
+  bg.addColorStop(0.5, '#07111f');
+  bg.addColorStop(1, '#030610');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  const boardGlow = ctx.createRadialGradient(canvasWidth * 0.5, canvasHeight * 0.18, 20, canvasWidth * 0.5, canvasHeight * 0.18, canvasWidth * 0.7);
+  boardGlow.addColorStop(0, 'rgba(124,92,255,.16)');
+  boardGlow.addColorStop(0.34, 'rgba(45,226,230,.10)');
+  boardGlow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = boardGlow;
+  ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+  const eased = easeInOutCubic(Math.max(0, Math.min(1, t || 0)));
+  const [fr, fc] = move ? move.from : [-1, -1];
+  const [tr, tc] = move ? move.to : [-1, -1];
+  const srcPiece = move ? (move.pieceBefore || prevBoard?.[fr]?.[fc] || null) : null;
+  const dstPrevPiece = move ? prevBoard?.[tr]?.[tc] || null : null;
+  const movingX = move ? (fc + (tc - fc) * eased) : 0;
+  const movingY = move ? (fr + (tr - fr) * eased) : 0;
+  const moveMark = move ? getMarkTone(move.mark) : { text:'', tone:'mark-neutral' };
+  const moveMarkPalette = moveMark.text ? tonePalette(moveMark.tone) : null;
+  const revealBadge = options.revealBadge !== false;
+  const isBrilliant = !!move && moveMark.tone === 'mark-turquoise';
+  const mode = move ? (move.captured ? 'capture' : (move.pieceAfter?.isKing ? 'king' : 'normal')) : 'idle';
+  const motion = move ? (options.freezeMotion ? 0 : Math.sin(Math.PI * eased)) : 0;
+  const cameraHold = move ? (options.freezeMotion ? 0 : (0.28 + 0.72 * motion)) : 0;
+  const lead = move ? Math.pow(Math.max(0, Math.min(1, eased + 0.18)), 0.72) : 0;
+  const intensity = state.effect === 'impact' ? 1.18 : state.effect === 'clean' ? 0.92 : 1.0;
+  const dx = move ? (tc - fc) : 0;
+  const dy = move ? (tr - fr) : 0;
+  const focusX = move ? (marginX + (movingX + 0.5) * cell) : centerX;
+  const focusY = move ? (marginY + (movingY + 0.5) * cell) : centerY;
+  const panX = move ? ((centerX - focusX) * cameraHold + Math.sin(eased * Math.PI * 2) * cell * 0.015) : 0;
+  const panY = move ? ((centerY - focusY) * cameraHold + Math.cos(eased * Math.PI * 2) * cell * 0.015) : 0;
+  const zoom = 1 + (move ? ((mode === 'capture' ? 0.88 : mode === 'king' ? 0.82 : 0.76) * cameraHold * intensity) : 0);
+  const rot = move ? Math.max(-0.12, Math.min(0.12, (dx - dy) * 0.02 * cameraHold * intensity)) : 0;
+
+  ctx.save();
+  ctx.translate(centerX + panX, centerY + panY);
+  ctx.rotate(rot);
+  ctx.scale(zoom, zoom);
+  ctx.translate(-centerX, -centerY);
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,.04)';
+  drawRoundedRect(ctx, marginX - 28, marginY - 28, boardSize + 56, boardSize + 56, 28);
+  ctx.fill();
+  ctx.restore();
+
+  for(let r = 0; r < 8; r++){
+    for(let c = 0; c < 8; c++){
+      const x = marginX + c * cell;
+      const y = marginY + r * cell;
+      const isWhite = (r + c) % 2 === 0;
+      ctx.fillStyle = isWhite ? '#f7f7f1' : '#1f6f45';
+      ctx.fillRect(x, y, cell, cell);
+    }
+  }
+
+  if(move && moveMarkPalette){
+    const markAlpha = moveMark.tone === 'mark-turquoise' ? 0.18
+      : moveMark.tone === 'mark-blue' ? 0.17
+      : moveMark.tone === 'mark-green' ? 0.20
+      : moveMark.tone === 'mark-orange' ? 0.15
+      : moveMark.tone === 'mark-red' ? 0.16
+      : moveMark.tone === 'mark-softred' ? 0.14
+      : moveMark.tone === 'mark-brown' ? 0.15
+      : 0.13;
+    const destAlpha = Math.min(0.42, markAlpha * (0.45 + 0.55 * eased));
+    ctx.save();
+    ctx.globalAlpha = destAlpha;
+    ctx.fillStyle = moveMarkPalette.fill;
+    ctx.fillRect(marginX + tc * cell, marginY + tr * cell, cell, cell);
+    ctx.globalAlpha = Math.min(0.55, destAlpha + 0.06);
+    ctx.strokeStyle = moveMarkPalette.fill;
+    ctx.lineWidth = Math.max(2, cell * 0.045);
+    ctx.strokeRect(marginX + tc * cell + 1, marginY + tr * cell + 1, cell - 2, cell - 2);
+    ctx.restore();
+  }
+
+  if(move && mode !== 'idle'){
+    const glowX = marginX + (move.from[1] + (move.to[1] - move.from[1]) * eased + 0.5) * cell;
+    const glowY = marginY + (move.from[0] + (move.to[0] - move.from[0]) * eased + 0.5) * cell;
+    const glow = ctx.createRadialGradient(glowX, glowY, 2, glowX, glowY, cell * 1.15);
+    glow.addColorStop(0, mode === 'capture' ? 'rgba(255,232,107,.35)' : 'rgba(45,226,230,.28)');
+    glow.addColorStop(0.42, mode === 'capture' ? 'rgba(255,232,107,.16)' : 'rgba(45,226,230,.11)');
+    glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(glowX - cell * 1.2, glowY - cell * 1.2, cell * 2.4, cell * 2.4);
+  }
+
+  for(let r = 0; r < 8; r++){
+    for(let c = 0; c < 8; c++){
+      const skipSource = move && r === fr && c === fc;
+      const skipDest = move && r === tr && c === tc;
+      if(skipSource || skipDest) continue;
+      const piece = prevBoard?.[r]?.[c];
+      if(piece){
+        drawPiece(ctx, piece, marginX + c * cell + cell / 2, marginY + r * cell + cell / 2, cell * 0.82, 1);
+      }
+    }
+  }
+
+  const landed = !!move && eased >= 0.995;
+  const finalPiece = move ? (move.pieceAfter || nextBoard?.[tr]?.[tc] || srcPiece) : null;
+
+  if(move && dstPrevPiece && !landed){
+    drawPiece(ctx, dstPrevPiece, marginX + tc * cell + cell / 2, marginY + tr * cell + cell / 2, cell * 0.82, 1 - eased * 0.92);
+  }
+
+  if(move && srcPiece && !landed){
+    const x = marginX + (movingX + 0.5) * cell;
+    const y = marginY + (movingY + 0.5) * cell;
+    const moveRotation = (options.rotateMovingPiece && isBrilliant && eased > 0 && eased < 1)
+      ? (Math.PI * 2.25 * eased)
+      : 0;
+    drawPiece(ctx, srcPiece, x, y, cell * (0.82 + eased * 0.04), 1, moveRotation);
+  }
+
+  if(move && landed && finalPiece){
+    drawPiece(ctx, finalPiece, marginX + tc * cell + cell / 2, marginY + tr * cell + cell / 2, cell * 0.82, 1);
+  }
+
+  if(move && moveMark.text && landed && revealBadge){
+    const badgeAlpha = 1;
+    const badgePulse = 1;
+    const tx = marginX + tc * cell + cell / 2;
+    const ty = marginY + tr * cell + cell / 2;
+    ctx.save();
+    ctx.globalAlpha = badgeAlpha;
+    drawMarkBadge(ctx, moveMark, tx, ty - cell * 0.02, cell * 0.98 * badgePulse, badgeAlpha);
+    ctx.restore();
+  }
+
+  if(move && move.captured){
+    const capX = marginX + tr * cell + cell / 2;
+    const capY = marginY + tr * cell + cell / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.8 * motion;
+    ctx.fillStyle = 'rgba(255,232,107,.12)';
+    ctx.beginPath();
+    ctx.arc(capX, capY, cell * (0.45 + motion * 0.35), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  if(options.captionText){
+    const caption = String(options.captionText);
+    ctx.save();
+    ctx.font = `800 ${Math.max(22, cell * 0.23)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    const metrics = ctx.measureText(caption);
+    const padX = Math.max(14, cell * 0.18);
+    const padY = Math.max(8, cell * 0.10);
+    const boxW = Math.min(cell * 2.6, metrics.width + padX * 2);
+    const boxH = Math.max(34, cell * 0.46);
+
+    const baseX = marginX + (tc + 0.5) * cell;
+    const baseY = marginY + (tr + 0.5) * cell;
+    const rightSide = tc <= 4;
+    let boxX = rightSide ? baseX + cell * 0.16 : baseX - boxW - cell * 0.16;
+    let boxY = baseY - boxH / 2;
+
+    boxX = Math.max(marginX + 4, Math.min(marginX + boardSize - boxW - 4, boxX));
+    boxY = Math.max(marginY + 4, Math.min(marginY + boardSize - boxH - 4, boxY));
+
+    ctx.fillStyle = 'rgba(5,8,18,.78)';
+    drawRoundedRect(ctx, boxX, boxY, boxW, boxH, Math.min(16, boxH * 0.36));
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,.18)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = 'rgba(0,0,0,.36)';
+    ctx.shadowBlur = 8;
+    ctx.fillText(caption, boxX + boxW / 2, boxY + boxH / 2 + 1);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+function clearVideoUrl(){
+  if(state.videoUrl){
+    URL.revokeObjectURL(state.videoUrl);
+    state.videoUrl = '';
+  }
+  if(downloadLink){
+    downloadLink.hidden = true;
+    downloadLink.href = '#';
+    downloadLink.download = '';
+    downloadLink.setAttribute('aria-disabled', 'true');
+  }
+}
+
+function setDownloadReady(blob, filename){
+  clearVideoUrl();
+  state.videoFilename = filename;
+  state.videoUrl = URL.createObjectURL(blob);
+  if(downloadLink){
+    downloadLink.href = state.videoUrl;
+    downloadLink.download = filename;
+    downloadLink.hidden = false;
+    downloadLink.textContent = `⬇ ${filename}`;
+    downloadLink.setAttribute('aria-disabled', 'false');
+  }
+}
+
+
+
+async function exportSilentVideo(){
+  if(!state.history.length){
+    alert('先に棋譜を読み込んでください。');
+    return;
+  }
+  pause();
+  exportBtn.disabled = true;
+  const hint = document.getElementById('exportHint');
+  const previousText = hint.innerHTML;
+
+  const fps = EXPORT_FPS;
+  const moveFrames = state.effect === 'clean' ? 16 : state.effect === 'impact' ? 18 : 22;
+  const settleFrames = Math.max(12, Math.round(18 / Math.max(state.speed, 0.5)));
+  const exportPlan = getExportHistoryWithinBudget(
+    state.history,
+    (move) => {
+      const moveFrameCount = estimateSilentMoveFrames(move, moveFrames, settleFrames, state.speed);
+      return {
+        frames: moveFrameCount,
+        seconds: moveFrameCount / fps,
+      };
+    },
+    { frames: 1 + settleFrames, seconds: (1 + settleFrames) / fps }
+  );
+
+  try{
+    hint.innerHTML = exportPlan.truncated
+      ? `書き出し中… 手数が多いため、先頭 ${exportPlan.history.length} 手までを書き出しています。`
+      : '書き出し中… MP4を直接生成しています。';
+
+    const recordCanvas = document.createElement('canvas');
+    recordCanvas.width = EXPORT_SIZE;
+    recordCanvas.height = EXPORT_SIZE;
+    const ctx = recordCanvas.getContext('2d', { alpha: false });
+    if(!ctx){
+      throw new Error('キャンバスの初期化に失敗しました。');
+    }
+
+    const { Output, BufferTarget, Mp4OutputFormat, CanvasSource } = await mediabunnyPromise;
+    if(!Output || !BufferTarget || !Mp4OutputFormat || !CanvasSource){
+      throw new Error('MP4書き出し用のライブラリを読み込めませんでした。');
+    }
+
+    if(typeof window.VideoEncoder === 'undefined'){
+      throw new Error('このブラウザはWebCodecsに未対応です。');
+    }
+
+    const output = new Output({
+      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+      target: new BufferTarget(),
+    });
+
+    const videoSource = new CanvasSource(recordCanvas, {
+      codec: 'avc',
+      bitrate: 8_000_000,
+      frameRate: fps,
+      keyFrameInterval: 2,
+      hardwareAcceleration: 'no-preference',
+    });
+
+    output.addVideoTrack(videoSource);
+    await output.start();
+
+    let timestamp = 0;
+    const frameDuration = 1 / fps;
+
+    const pushFrame = async () => {
+      await videoSource.add(timestamp, frameDuration);
+      timestamp += frameDuration;
+    };
+
+    const firstBoard = state.boards[0] || initialBoard();
+    drawExportFrame(ctx, firstBoard, firstBoard, null, 1, recordCanvas.width, recordCanvas.height);
+    await pushFrame();
+
+    for(let i = 0; i < exportPlan.history.length; i++){
+      const move = exportPlan.history[i];
+      const prevBoard = state.boards[i] || initialBoard();
+      const nextBoard = state.boards[i + 1] || prevBoard;
+      const moveMark = getMarkTone(move.mark);
+      const frames = move.captured ? Math.max(moveFrames, 24) : moveFrames;
+      const isBrilliant = moveMark.tone === 'mark-turquoise';
+      const preMoveHoldFrames = isBrilliant
+        ? Math.max(8, Math.round(12 / Math.max(state.speed, 0.5)))
+        : 0;
+
+      for(let h = 0; h < preMoveHoldFrames; h++){
+        drawExportFrame(
+          ctx,
+          prevBoard,
+          nextBoard,
+          move,
+          0,
+          recordCanvas.width,
+          recordCanvas.height,
+          { revealBadge: false, freezeMotion: true, rotateMovingPiece: false }
+        );
+        await pushFrame();
+      }
+
+      for(let f = 0; f < frames; f++){
+        const t = frames <= 1 ? 1 : f / (frames - 1);
+        drawExportFrame(
+          ctx,
+          prevBoard,
+          nextBoard,
+          move,
+          t,
+          recordCanvas.width,
+          recordCanvas.height,
+          { revealBadge: moveMark.tone !== 'mark-turquoise', rotateMovingPiece: isBrilliant }
+        );
+        await pushFrame();
+      }
+
+      for(let h = 0; h < Math.max(2, Math.round(settleFrames / 4)); h++){
+        drawExportFrame(ctx, prevBoard, nextBoard, move, 1, recordCanvas.width, recordCanvas.height);
+        await pushFrame();
+      }
+    }
+
+    const finalIndex = exportPlan.history.length - 1;
+    const finalMove = finalIndex >= 0 ? exportPlan.history[finalIndex] : null;
+    const finalPrevBoard = finalIndex >= 0 ? (state.boards[finalIndex] || initialBoard()) : initialBoard();
+    const finalBoard = state.boards[finalIndex + 1] || state.boards[state.boards.length - 1] || initialBoard();
+    for(let i = 0; i < settleFrames; i++){
+      drawExportFrame(ctx, finalPrevBoard, finalBoard, finalMove, 1, recordCanvas.width, recordCanvas.height);
+      await pushFrame();
+    }
+
+    videoSource.close();
+    await output.finalize();
+
+    const buffer = output.target.buffer;
+    if(!buffer){
+      throw new Error('MP4データの生成に失敗しました。');
+    }
+
+    const finalBlob = new Blob([buffer], { type: 'video/mp4' });
+    setDownloadReady(finalBlob, 'kifu-cinema.mp4');
+    hint.innerHTML = exportPlan.truncated
+      ? `MP4を書き出しました。先頭 ${exportPlan.history.length} 手までを保存しています。`
+      : 'MP4を書き出しました。下のダウンロードリンクから保存できます。';
+    await sleep(300);
+  }catch(err){
+    console.error(err);
+    alert('動画書き出しに失敗しました: ' + err.message);
+    hint.innerHTML = previousText;
+  }finally{
+    exportBtn.disabled = false;
+    if(!state.videoUrl){
+      if(downloadLink){ downloadLink.hidden = true; }
+    }
+    updateUI();
+  }
+}
+
+
+
+function reportExportProgress(percent, message) {
+  const pct = Math.max(0, Math.min(100, Math.round(Number(percent) || 0)));
+  const suffix = message ? ` ${message}` : '';
+  console.info(`[動画生成] ${pct}%${suffix}`);
+}
+
+function estimateVoiceDuration(spokenText, move = null) {
+  const spoken = String(spokenText ?? '').trim();
+  const words = spoken ? spoken.split(/\s+/).filter(Boolean).length : 0;
+  const chars = spoken.replace(/\s+/g, '').length;
+  return Math.max(
+    0.9,
+    Math.min(
+      2.8,
+      0.62 + words * 0.18 + chars * 0.018 + (move?.captured ? 0.08 : 0) + (move?.pieceAfter?.isKing ? 0.06 : 0)
+    )
+  );
+}
+
+async function renderMoveForExport(ctx, recordCanvas, videoSource, move, prevBoard, nextBoard, timestamp, fps, totalSecondsOverride = null, onProgress = null) {
+  const caption = moveVoiceNotation(move);
+  const spoken = moveSpeechText(move);
+  const totalSeconds = totalSecondsOverride ?? estimateVoiceDuration(spoken, move);
+  const holdSeconds = Math.min(0.3, totalSeconds * 0.2);
+  const settleSeconds = Math.min(0.28, totalSeconds * 0.18);
+  const moveSeconds = Math.max(0.45, totalSeconds - holdSeconds - settleSeconds);
+
+  const phases = [
+    { seconds: holdSeconds, startT: 0, endT: 0, caption },
+    { seconds: moveSeconds, startT: 0, endT: 1, caption },
+    { seconds: settleSeconds, startT: 1, endT: 1, caption },
+  ];
+
+  let renderedFrames = 0;
+  const totalFrames = phases.reduce((sum, phase) => sum + Math.max(1, Math.round(phase.seconds * fps)), 0);
+
+  for (const phase of phases) {
+    const frames = Math.max(1, Math.round(phase.seconds * fps));
+    for (let i = 0; i < frames; i++) {
+      const p = frames === 1 ? phase.endT : phase.startT + (phase.endT - phase.startT) * (i / (frames - 1));
+      drawExportFrame(
+        ctx,
+        prevBoard,
+        nextBoard,
+        move,
+        p,
+        recordCanvas.width,
+        recordCanvas.height,
+        {
+          revealBadge: move?.mark !== '!!',
+          rotateMovingPiece: move?.mark === '!!',
+          captionText: phase.caption
+        }
+      );
+      await videoSource.add(timestamp, 1 / fps);
+      timestamp += 1 / fps;
+      renderedFrames += 1;
+      if (typeof onProgress === 'function' && totalFrames > 0) {
+        onProgress(renderedFrames, totalFrames, phase.caption);
+      }
+      await sleep(1000 / fps);
+    }
+  }
+
+  return timestamp;
+}
+
+
+async function exportVideo(){
+  if(!state.history.length){
+    alert('先に棋譜を読み込んでください。');
+    return;
+  }
+
+  pause();
+  exportBtn.disabled = true;
+  const hint = document.getElementById('exportHint');
+  const previousText = hint.innerHTML;
+
+  reportExportProgress(0, '開始');
+
+  let output = null;
+  let videoSource = null;
+  let audioSource = null;
+  let recordCanvas = null;
+  let ctx = null;
+  let timestamp = 0;
+  let finalized = false;
+  let savedBlob = null;
+
+  try{
+    if(typeof window.VideoEncoder === 'undefined'){
+      throw new Error('このブラウザはWebCodecsの動画エンコードに未対応です。');
+    }
+
+    const { Output, BufferTarget, Mp4OutputFormat, CanvasSource, AudioBufferSource } = await mediabunnyPromise;
+
+    const fps = EXPORT_FPS;
+    recordCanvas = document.createElement('canvas');
+    recordCanvas.width = EXPORT_SIZE;
+    recordCanvas.height = EXPORT_SIZE;
+    ctx = recordCanvas.getContext('2d', { alpha: false });
+    if(!ctx){
+      throw new Error('キャンバスの初期化に失敗しました。');
+    }
+
+    const finalSettleFrames = Math.max(12, Math.round(1.0 * fps));
+    const exportPlan = getExportHistoryWithinBudget(
+      state.history,
+      (move) => {
+        const moveSeconds = estimateVoiceDuration(moveSpeechText(move), move);
+        return {
+          frames: Math.max(1, Math.ceil(moveSeconds * fps)),
+          seconds: moveSeconds,
+        };
+      },
+      { frames: 1 + finalSettleFrames, seconds: (1 + finalSettleFrames) / fps }
+    );
+
+    hint.innerHTML = exportPlan.truncated
+      ? `音声付きMP4を書き出し中… 手数が多いため、先頭 ${exportPlan.history.length} 手までを書き出しています。`
+      : '音声付きMP4を書き出し中… 録音権限は不要です。';
+
+    reportExportProgress(6, 'meSpeak 読み込み中');
+    let voiceResult = { buffer: null, renderedMoves: 0, stoppedOnError: false };
+    try {
+      voiceResult = await renderVoiceAudioBuffer(exportPlan.history, (done, total) => {
+        const percent = 6 + (24 * done / Math.max(total, 1));
+        reportExportProgress(percent, `音声 ${done}/${total}`);
+      });
+      if (voiceResult.stoppedOnError) {
+        reportExportProgress(32, `一部の音声を空白で補完して継続しました（${voiceResult.renderedMoves}手）。`);
+      } else {
+        reportExportProgress(32, '音声生成完了');
+      }
+    } catch (err) {
+      console.warn('音声生成で失敗したため、ここで動画生成を終了して保存します。', err);
+      voiceResult = { buffer: null, renderedMoves: 0, stoppedOnError: true };
+      reportExportProgress(32, '音声生成失敗');
+    }
+
+    // __EXPORT_HISTORY_MARKER__
+    const exportHistory = exportPlan.history;
+
+    output = new Output({
+      format: new Mp4OutputFormat({ fastStart: 'in-memory' }),
+      target: new BufferTarget(),
+    });
+
+    videoSource = new CanvasSource(recordCanvas, {
+      codec: 'avc',
+      bitrate: 8_000_000,
+      frameRate: fps,
+      keyFrameInterval: 2,
+      hardwareAcceleration: 'no-preference',
+    });
+
+    audioSource = new AudioBufferSource({
+      codec: 'aac',
+      bitrate: 128_000,
+    });
+
+    output.addVideoTrack(videoSource, { frameRate: fps });
+    output.addAudioTrack(audioSource, { languageCode: 'eng', name: 'EnglishVoice' });
+    await output.start();
+
+    try {
+      if (voiceResult.buffer) {
+        await audioSource.add(voiceResult.buffer);
+      } else {
+        const FallbackAudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (FallbackAudioCtx) {
+          const fallbackCtx = new FallbackAudioCtx();
+          try {
+            await audioSource.add(makeSilenceBuffer(fallbackCtx, 0.5, fallbackCtx.sampleRate || 48000));
+          } finally {
+            if (typeof fallbackCtx.close === 'function') {
+              try { await fallbackCtx.close(); } catch (_) {}
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('音声トラックの追加に失敗したため、無音で続行します。', err);
+    }
+
+    reportExportProgress(38, '動画エンコード開始');
+
+    const firstBoard = state.boards[0] || initialBoard();
+    drawExportFrame(
+      ctx,
+      firstBoard,
+      firstBoard,
+      null,
+      1,
+      recordCanvas.width,
+      recordCanvas.height,
+    );
+    await videoSource.add(timestamp, 1 / fps);
+    timestamp += 1 / fps;
+    await sleep(1000 / fps);
+
+    for(let i = 0; i < exportHistory.length; i++){
+      const move = exportHistory[i];
+      const prevBoard = state.boards[i] || initialBoard();
+      const nextBoard = state.boards[i + 1] || prevBoard;
+
+      const moveDuration = estimateVoiceDuration(moveSpeechText(move), move);
+      timestamp = await renderMoveForExport(
+        ctx,
+        recordCanvas,
+        videoSource,
+        move,
+        prevBoard,
+        nextBoard,
+        timestamp,
+        fps,
+        moveDuration,
+        (frameDone, frameTotal) => {
+          const moveBase = 38 + (52 * i / Math.max(exportHistory.length, 1));
+          const moveSpan = 52 / Math.max(exportHistory.length, 1);
+          const percent = moveBase + moveSpan * (frameDone / Math.max(frameTotal, 1));
+          reportExportProgress(percent, `手 ${i + 1}/${exportHistory.length}`);
+        }
+      );
+      reportExportProgress(38 + (52 * (i + 1) / Math.max(exportHistory.length, 1)), `手 ${i + 1}/${exportHistory.length} 完了`);
+    }
+
+    const finalIndex = exportHistory.length - 1;
+    const finalMove = finalIndex >= 0 ? exportHistory[finalIndex] : null;
+    const finalPrevBoard = finalIndex >= 0 ? (state.boards[finalIndex] || initialBoard()) : initialBoard();
+    const finalBoard = state.boards[finalIndex + 1] || state.boards[state.boards.length - 1] || initialBoard();
+
+    for(let i = 0; i < finalSettleFrames; i++){
+      drawExportFrame(
+        ctx,
+        finalPrevBoard,
+        finalBoard,
+        finalMove,
+        1,
+        recordCanvas.width,
+        recordCanvas.height,
+        { captionText: finalMove ? moveVoiceNotation(finalMove) : '完了' }
+      );
+      await videoSource.add(timestamp, 1 / fps);
+      timestamp += 1 / fps;
+      await sleep(1000 / fps);
+    }
+
+    reportExportProgress(94, '最終化中');
+    if(videoSource){
+      try { videoSource.close(); } catch (_) {}
+    }
+    finalized = true;
+    await output.finalize();
+
+    const buffer = output.target.buffer;
+    if(!buffer){
+      throw new Error('MP4データの生成に失敗しました。');
+    }
+
+    savedBlob = new Blob([buffer], { type: 'video/mp4' });
+    setDownloadReady(savedBlob, 'kifu-cinema-voice.mp4');
+    hint.innerHTML = exportPlan.truncated
+      ? `音声付きMP4を書き出しました。先頭 ${exportHistory.length} 手までを保存しています。`
+      : '音声付きMP4を書き出しました。下のダウンロードリンクから保存できます。';
+    reportExportProgress(100, '完了');
+    await sleep(200);
+  }catch(err){
+    console.error(err);
+    const message = err?.message ? String(err.message) : '不明なエラー';
+    reportExportProgress(0, `中断: ${message}`);
+
+    try{
+      if(videoSource){
+        try { videoSource.close(); } catch (_) {}
+      }
+      if(output && !finalized){
+        finalized = true;
+        await output.finalize();
+        const buffer = output.target?.buffer;
+        if(buffer){
+          savedBlob = new Blob([buffer], { type: 'video/mp4' });
+          setDownloadReady(savedBlob, 'kifu-cinema-voice-partial.mp4');
+          hint.innerHTML = `エラーのため、${state.history.length ? '途中まで' : '空の'}MP4を保存しました。`;
+        }else{
+          hint.innerHTML = 'エラーで終了しましたが、保存できるMP4データは作れませんでした。';
+        }
+      }else{
+        hint.innerHTML = 'エラーで終了しました。';
+      }
+    }catch(saveErr){
+      console.error(saveErr);
+      hint.innerHTML = 'エラーで終了しましたが、保存処理にも失敗しました。';
+    }
+  }finally{
+    exportBtn.disabled = false;
+    updateUI();
+  }
+}
+
+function setSample(){
+  boardInput.value = JSON.stringify(INITIAL_SETUP, null, 2);
+  jsonInput.value = SAMPLE_TEXT;
+  boardStatus.textContent = 'sample loaded';
+  jsonStatus.textContent = 'sample loaded';
+}
+
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if(!file) return;
+  const text = await file.text();
+  jsonInput.value = text;
+  jsonStatus.textContent = file.name;
+});
+
+loadBtn.addEventListener('click', () => {
+  try{
+    const parsed = parseGamePackage(jsonInput.value.trim(), boardInput.value.trim());
+    loadHistory(parsed.history, parsed.initialSetup);
+    if(state.autoPlay) play();
+    boardStatus.textContent = parsed.initialSetup ? 'loaded' : 'sample loaded';
+    jsonStatus.textContent = 'loaded';
+    if(parsed.initialSetup && !boardInput.value.trim()){
+      boardInput.value = JSON.stringify(parsed.initialSetup, null, 2);
+    }
+  }catch(err){
+    jsonStatus.textContent = 'error';
+    boardStatus.textContent = 'error';
+    alert('読み込みに失敗しました: ' + err.message);
+  }
+});
+
+sampleBtn.addEventListener('click', () => {
+  setSample();
+  try{
+    loadHistory(SAMPLE_PACKAGE.moves, SAMPLE_PACKAGE.initialSetup);
+  }catch(err){}
+});
+
+playBtn.addEventListener('click', play);
+pauseBtn.addEventListener('click', pause);
+prevBtn.addEventListener('click', () => step(-1));
+nextBtn.addEventListener('click', () => step(1));
+resetBtn.addEventListener('click', resetPlayback);
+exportBtn.addEventListener('click', exportVideo);
+
+speedRange.addEventListener('input', () => {
+  state.speed = Number(speedRange.value);
+  speedValue.textContent = state.speed.toFixed(1) + 'x';
+  speedLabel.textContent = state.speed.toFixed(1) + 'x';
+});
+
+effectSelect.addEventListener('change', () => {
+  state.effect = effectSelect.value;
+  applyCinematicChrome();
+});
+
+autoPlayBtn.addEventListener('click', () => {
+  state.autoPlay = !state.autoPlay;
+  autoPlayBtn.textContent = state.autoPlay ? '読込後に自動再生 ON' : '読込後に自動再生';
+});
+
+loopBtn.addEventListener('click', () => {
+  state.loop = !state.loop;
+  loopBtn.textContent = state.loop ? 'ループ ON' : 'ループ OFF';
+});
+
+
+document.addEventListener('keydown', (e) => {
+  if(e.target && ['TEXTAREA','INPUT','SELECT'].includes(e.target.tagName)) return;
+  if(e.code === 'Space'){ e.preventDefault(); state.playing ? pause() : play(); }
+  if(e.code === 'ArrowRight') step(1);
+  if(e.code === 'ArrowLeft') step(-1);
+  if(e.code === 'Home') resetPlayback();
+});
+
+setSample();
+applyCinematicChrome();
+loadHistory(SAMPLE_PACKAGE.moves, SAMPLE_PACKAGE.initialSetup);
+updateUI();
+if(downloadLink){ downloadLink.hidden = true; }
+</script>
+</body>
+</html>
